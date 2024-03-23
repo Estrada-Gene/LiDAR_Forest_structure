@@ -83,7 +83,6 @@ hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 30, 
 summary(n_by_ct$n.all)
 summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 
-
 ### SPECIES DIVERSITY
 ## by camera trap location
 shannon_ct <- diversity(table(m$locationID, m$Species), index = "shannon")
@@ -111,9 +110,6 @@ rm(shannon_scan, shannon_all)
 shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
 shannon_ft
 
-
-### MODELING
-
 #adding species richness and diversity data to stand metrics table
 stand_mets <- left_join(stand_mets, n_by_ct)
 stand_mets <- left_join(stand_mets, shannon_ct)
@@ -137,20 +133,72 @@ stand_mets <- stand_mets %>%
   mutate(across(8:19, scale, .names = "{.col}.sc"))
 
 
-#fitting models
+## Richness and diversity visualization
+ct <- ct %>%
+  rename(locationID   = Deployment.Location.ID,
+         habitat      = Treatment.Strata,
+         location     = Location,
+         on.off.trail = Feature.Type)
+
+#plotting species richness by CT location/forest type - all CT locations only
+n_by_ct %>%
+  left_join(., ct[,c("locationID", "habitat")]) %>%
+  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
+                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
+  ggplot(aes(x = habitat, y = n.all)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Species Richness by CT - all locations", x = "", y = "n species")
+
+#plotting species richness by CT location/forest type - scanned sites only
+ggplot(stand_mets, aes(x = habitat, y = n.all)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Species Richness by CT - scanned sites", x = "", y = "n species")
+
+#plotting species diversity by CT location/forest type - all CT locations
+shannon_ct %>%
+  left_join(., ct[,c("locationID", "habitat")]) %>%
+  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
+                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
+  ggplot(aes(x = habitat, y = shannon_ct)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  ylim(0, 3) +
+  labs(title = "Species Diversity by CT - all locations", x = "", y = "n species")
+
+#plotting species diversity by CT location/forest type - scanned sites only
+ggplot(stand_mets, aes(x = habitat, y = shannon_ct)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  ylim(0, 3) +
+  labs(title = "Species Diversity by CT", x = "", y = "Shannon Diversity Index")
+
+
+### MODELING
 library(lme4)
 library(coefplot2)
 
-#species richness as outcome variable
+## GLMM
+#species richness as outcome variable - by CT location
 richness_model <- glmer(n.all ~ 
                  max.height.sc +
-                 #sd.r.sc +
+                 sd.r.sc +
                  CRR.rho.sc +
                  perc.below.2m.sc +
                  basal.area.sc +
-                 #mean.tree.h.sc +
+                 mean.tree.h.sc +
                  stem.vol.sc +
-                 (1|habitat), 
+                 #habitat +
+                 (1|habitat/locationID), 
                family = poisson(link = "log"), 
                offset = log(act.days),
                data = stand_mets)
@@ -159,7 +207,7 @@ summary(richness_model)
 coefplot2(richness_model, top.axis = FALSE, main = "Species Richness",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
-#species diversity as outcome variable
+#species diversity as outcome variable - by CT location
 shannon_model <- glmer(shannon_ct ~ 
                           max.height.sc +
                           sd.r.sc +
@@ -175,14 +223,5 @@ shannon_model <- glmer(shannon_ct ~
 summary(shannon_model)
 coefplot2(shannon_model, top.axis = FALSE, main = "Species Diversity (Shannon)",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
-
-#not seeing any obvious associations between predictors and outcomes
-plot(stand_mets$n.all ~ stand_mets$max.height)
-plot(stand_mets$n.all ~ stand_mets$basal.area)
-plot(stand_mets$n.all ~ stand_mets$stem.vol)
-
-plot(stand_mets$shannon_ct ~ stand_mets$mean.tree.h)
-plot(stand_mets$shannon_ct ~ stand_mets$sd.r)
-
 
 #maybe next I can try some GAM models and/or try to model individual species that are common?
