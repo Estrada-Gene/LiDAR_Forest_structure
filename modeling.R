@@ -10,6 +10,12 @@ m <- m[,-1]
 m$habitat <- factor(m$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
                                           "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"))
 
+#mammal observation table
+species_table <- as.data.frame(table(m$Species, m$habitat))
+species_table <- pivot_wider(species_table, names_from = "Var2", values_from = "Freq")
+colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
+#write.csv(species_table, file = "species_observation_table_byFT.csv")
+
 #LiDAR-derived metrics data
 stand_mets <- read.csv(file = "data/select.stand.mets.csv", header = TRUE)
 stand_mets <- stand_mets[,-1]
@@ -82,6 +88,7 @@ hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 30, 
 
 summary(n_by_ct$n.all)
 summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
+
 
 ### SPECIES DIVERSITY
 ## by camera trap location
@@ -181,6 +188,28 @@ ggplot(stand_mets, aes(x = habitat, y = shannon_ct)) +
   theme_classic() +
   ylim(0, 3) +
   labs(title = "Species Diversity by CT", x = "", y = "Shannon Diversity Index")
+
+#species richness by elevation
+ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
+ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
+
+n_by_ct %>%
+  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
+  ggplot(aes(x = altitude, y = n.all)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  theme_classic() +
+  labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
+
+#species diversity by elevation
+shannon_ct %>%
+  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
+  ggplot(aes(x = altitude, y = shannon_ct)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  theme_classic() +
+  labs(title = "Species Diversity by Elevation", x = "elevation (m)", y = "Shannon Diversity Index")
+
 
 
 ### MODELING
