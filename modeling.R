@@ -91,10 +91,13 @@ summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 
 
 ### SPECIES DIVERSITY
+
+## Shannon Diveristy
 ## by camera trap location
 shannon_ct <- diversity(table(m$locationID, m$Species), index = "shannon")
 shannon_ct <- rownames_to_column(as.data.frame(shannon_ct), var = "locationID")
 shannon_ct$locationID <- as.integer(shannon_ct$locationID)
+
 #compare 'all CT' and 'scanned CT' location Shannon Diversity value distributions
 #the 'scanned CT' locations seem slightly biased towards higher diversity values
 hist(shannon_ct$shannon_ct, breaks = 50, xlim = c(0,3))
@@ -117,9 +120,30 @@ rm(shannon_scan, shannon_all)
 shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
 shannon_ft
 
+
+## Simpson Diversity
+#by CT location
+simp_ct <- diversity(table(m$locationID, m$Species), index = "simpson")
+simp_ct <- rownames_to_column(as.data.frame(simp_ct), var = "locationID")
+simp_ct$locationID <- as.integer(simp_ct$locationID)
+
+#compare 'all CT' and 'scanned CT' location Simpson Diversity value distributions
+#distributions look similar
+hist(simp_ct$simp_ct, breaks = 50, xlim = c(0,1))
+hist(simp_ct$simp_ct[simp_ct$locationID %in% stand_mets$locationID], breaks = 50, xlim = c(0,1))
+
+
 #adding species richness and diversity data to stand metrics table
 stand_mets <- left_join(stand_mets, n_by_ct)
 stand_mets <- left_join(stand_mets, shannon_ct)
+stand_mets <- left_join(stand_mets, simp_ct)
+
+#calculating Pielou's diversity measure of species evenness
+div_mets <- shannon_ct %>%
+  left_join(., n_by_ct) %>%
+  mutate(div_even = shannon_ct/log(n.all)) %>%
+  left_join(simp_ct)
+
 
 #add CT survey effort data
 ct <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
@@ -167,7 +191,7 @@ ggplot(stand_mets, aes(x = habitat, y = n.all)) +
   theme_classic() +
   labs(title = "Species Richness by CT - scanned sites", x = "", y = "n species")
 
-#plotting species diversity by CT location/forest type - all CT locations
+#plotting Shannon diversity by CT location/forest type - all CT locations
 shannon_ct %>%
   left_join(., ct[,c("locationID", "habitat")]) %>%
   mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
@@ -178,16 +202,49 @@ shannon_ct %>%
   coord_flip() +
   theme_classic() +
   ylim(0, 3) +
-  labs(title = "Species Diversity by CT - all locations", x = "", y = "n species")
+  labs(title = "Shannon Diversity by CT - all locations", x = "", y = "n species")
 
-#plotting species diversity by CT location/forest type - scanned sites only
+#plotting Shannon diversity by CT location/forest type - scanned sites only
 ggplot(stand_mets, aes(x = habitat, y = shannon_ct)) +
   geom_boxplot() +
   geom_jitter(width = 0.2) +
   coord_flip() +
   theme_classic() +
   ylim(0, 3) +
-  labs(title = "Species Diversity by CT", x = "", y = "Shannon Diversity Index")
+  labs(title = "Shannon Diversity by CT", x = "", y = "Shannon Diversity Index")
+
+#plotting Simpson Diversity by CT/forest type - all CT locations
+simp_ct %>%
+  left_join(., ct[,c("locationID", "habitat")]) %>%
+  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
+                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
+  ggplot(aes(x = habitat, y = simp_ct)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Simpson Diversity by CT - all locations", x = "", y = "Simpson Diversity Index")
+
+#plotting Simpson diversity by CT location/forest type - scanned sites only
+ggplot(stand_mets, aes(x = habitat, y = simp_ct)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Simpson Diversity by CT - scanned locations", x = "", y = "Simpson Diversity Index")
+
+#plotting species evenness by CT location/forest type - all CT locations
+div_mets %>%
+  left_join(., ct[,c("locationID", "habitat")]) %>%
+  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
+                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
+  ggplot(aes(x = habitat, y = div_even)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Species Evenness by CT - all locations", x = "", y = "species evenness index")
+
 
 #species richness by elevation
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
@@ -201,15 +258,32 @@ n_by_ct %>%
   theme_classic() +
   labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
 
-#species diversity by elevation
+#shannon diversity by elevation
 shannon_ct %>%
   left_join(., ct_elev[,c("locationID", "altitude")]) %>%
   ggplot(aes(x = altitude, y = shannon_ct)) +
   geom_point() +
   geom_smooth(se = TRUE) +
   theme_classic() +
-  labs(title = "Species Diversity by Elevation", x = "elevation (m)", y = "Shannon Diversity Index")
+  labs(title = "Shannon Diversity by Elevation", x = "elevation (m)", y = "Shannon Diversity Index")
 
+#simpson diversity by elevation
+simp_ct %>%
+  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
+  ggplot(aes(x = altitude, y = simp_ct)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  theme_classic() +
+  labs(title = "Simpson Diversity by Elevation", x = "elevation (m)", y = "Simpson Diversity Index")
+
+#species evenness by elevation
+div_mets %>%
+  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
+  ggplot(aes(x = altitude, y = div_even)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  theme_classic() +
+  labs(title = "Species Evenness by Elevation", x = "elevation (m)", y = "Species Evenness Index")
 
 
 ### MODELING
