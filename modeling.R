@@ -249,13 +249,23 @@ div_mets %>%
 #species richness by elevation
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
 ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
+n_by_ct <- left_join(n_by_ct, ct_elev[,c("locationID", "altitude")])
 
-n_by_ct %>%
-  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
-  ggplot(aes(x = altitude, y = n.all)) +
+ggplot(n_by_ct, aes(x = altitude, y = n.all)) +
   geom_point() +
   geom_smooth(se = TRUE) +
   theme_classic() +
+  labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
+
+#both 'all CT locations' and "scanned locations' in the same plot to compare
+ggplot(n_by_ct, aes(x = altitude, y = n.all)) +
+  geom_point(data = subset(n_by_ct, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
+  geom_point(data = subset(n_by_ct, !locationID %in% stand_mets$locationID), aes(color = "all")) +
+  geom_smooth(data = subset(n_by_ct, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
+  geom_smooth(data = n_by_ct, aes(color = "all"), se = TRUE) +  
+  scale_color_manual(values = c("scanned" = "red", "all" = "blue")) +  
+  theme_classic() +
+  theme(legend.position = c(0.75, 0.95), legend.title = element_blank()) + 
   labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
 
 #shannon diversity by elevation
@@ -289,36 +299,46 @@ div_mets %>%
 ### MODELING
 library(lme4)
 library(coefplot2)
+library(PerformanceAnalytics)
+
+#checking correlation between predictors first
+chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","perc.below.2m.sc","stand.dens.sc",
+                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc")])
 
 ## GLMM
 #species richness as outcome variable - by CT location
 richness_model <- glmer(n.all ~ 
                  max.height.sc +
-                 sd.r.sc +
-                 CRR.rho.sc +
-                 perc.below.2m.sc +
-                 basal.area.sc +
                  mean.tree.h.sc +
+                 CRR.rho.sc +
+                 sd.r.sc +
+                 mean.dbh.sc +
+                 #basal.area.sc +
+                 stand.dens.sc +
                  stem.vol.sc +
-                 #habitat +
+                 perc.below.2m.sc +
                  (1|habitat/locationID), 
                family = poisson(link = "log"), 
                offset = log(act.days),
                data = stand_mets)
 
 summary(richness_model)
+
 coefplot2(richness_model, top.axis = FALSE, main = "Species Richness",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
 #species diversity as outcome variable - by CT location
 shannon_model <- glmer(shannon_ct ~ 
-                          max.height.sc +
-                          sd.r.sc +
-                          CRR.rho.sc +
-                          perc.below.2m.sc +
-                          basal.area.sc +
-                          mean.tree.h.sc +
-                          (1|habitat), 
+                         max.height.sc +
+                         mean.tree.h.sc +
+                         CRR.rho.sc +
+                         sd.r.sc +
+                         mean.dbh.sc +
+                         basal.area.sc +
+                         stand.dens.sc +
+                         stem.vol.sc +
+                         perc.below.2m.sc +
+                         (1|habitat), 
                         family = gaussian(link = "identity"), 
                         offset = log(act.days),
                         data = stand_mets)
