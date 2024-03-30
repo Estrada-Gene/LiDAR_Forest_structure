@@ -2,6 +2,7 @@
 
 library(tidyverse)
 library(vegan)
+library(cowplot)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -26,6 +27,9 @@ tree_mets <- read.csv(file = "data/all.tree.mets.csv", header = TRUE)
 tree_mets <- tree_mets[,-1]
 tree_mets$habitat <- factor(tree_mets$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
                                                             "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"))
+#camera trap data
+ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
+ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
 
 #some observations noted 'Unid' - unidentified to species and/or genus level
 table(m$Species)
@@ -143,7 +147,7 @@ div_mets <- shannon_ct %>%
   left_join(., n_by_ct) %>%
   mutate(div_even = shannon_ct/log(n.all)) %>%
   left_join(simp_ct)
-
+div_mets$div_even[div_mets$div_even == "NaN"] <- 0
 
 #add CT survey effort data
 ct <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
@@ -158,6 +162,7 @@ ct_active_days <- ct %>%
   rename(locationID = Deployment.Location.ID)
 
 stand_mets <- left_join(stand_mets, ct_active_days)  
+stand_mets <- left_join(stand_mets, div_mets[,c("locationID","div_even")])
 
 #scale and center all numeric predictors 
 stand_mets <- stand_mets %>%
@@ -171,12 +176,21 @@ ct <- ct %>%
          location     = Location,
          on.off.trail = Feature.Type)
 
+#add habitat data to diversity metrics table
+div_mets <- left_join(div_mets, ct_elev[,c("locationID","habitat","altitude")])
+div_mets$habitat <- factor(div_mets$habitat, levels = c("Peat Swamp","Freshwater Swamp","Alluvial Bench",
+                                                        "Lowland Sandstone","Lowland Granite",
+                                                        "Upland Granite","Montane"))
+#copying for visualization use only
+div_mets$dataset <- "all"
+div_mets$dataset[div_mets$locationID %in% stand_mets$locationID] <- "scanned"
+div_mets_viz <- div_mets
+div_mets_viz_scan <- div_mets_viz[div_mets_viz$dataset == "scanned",]
+div_mets_viz$dataset <- "all"
+div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
+
 #plotting species richness by CT location/forest type - all CT locations only
-n_by_ct %>%
-  left_join(., ct[,c("locationID", "habitat")]) %>%
-  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
-                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
-  ggplot(aes(x = habitat, y = n.all)) +
+ggplot(div_mets, aes(x = habitat, y = n.all)) +
   geom_boxplot() +
   geom_jitter(width = 0.2) +
   coord_flip() +
@@ -184,12 +198,22 @@ n_by_ct %>%
   labs(title = "Species Richness by CT - all locations", x = "", y = "n species")
 
 #plotting species richness by CT location/forest type - scanned sites only
-ggplot(stand_mets, aes(x = habitat, y = n.all)) +
+ggplot(div_mets[div_mets$locationID %in% stand_mets$locationID,], aes(x = habitat, y = n.all)) +
   geom_boxplot() +
   geom_jitter(width = 0.2) +
   coord_flip() +
   theme_classic() +
   labs(title = "Species Richness by CT - scanned sites", x = "", y = "n species")
+
+#plotting both in same plot
+p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
+  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  scale_fill_manual(values = c("cornflowerblue","coral3")) +
+  theme_classic() +
+  labs(title = "Species Richness", x = "", y = "n species", fill = "") +
+  coord_flip() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
 
 #plotting Shannon diversity by CT location/forest type - all CT locations
 shannon_ct %>%
@@ -213,6 +237,17 @@ ggplot(stand_mets, aes(x = habitat, y = shannon_ct)) +
   ylim(0, 3) +
   labs(title = "Shannon Diversity by CT", x = "", y = "Shannon Diversity Index")
 
+#plotting both in same plot
+p2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
+  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  scale_fill_manual(values = c("cornflowerblue","coral3")) +
+  theme_classic() +
+  labs(title = "Shannon Diversity", x = "", y = "Shannon Diversity Index", fill = "") +
+  coord_flip() +
+  theme(legend.position = "none", axis.text.y = element_blank(), 
+        plot.title = element_text(hjust = 0.5))
+
 #plotting Simpson Diversity by CT/forest type - all CT locations
 simp_ct %>%
   left_join(., ct[,c("locationID", "habitat")]) %>%
@@ -233,6 +268,17 @@ ggplot(stand_mets, aes(x = habitat, y = simp_ct)) +
   theme_classic() +
   labs(title = "Simpson Diversity by CT - scanned locations", x = "", y = "Simpson Diversity Index")
 
+#plotting both in same plot
+ggplot(div_mets_viz, aes(x = habitat, y = simp_ct, fill = dataset)) +
+  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  theme_classic() +
+  labs(title = "Simpson Diversity", x = "", y = "Simpson Diversity Index", fill = "") +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) +
+  theme(legend.position = c(.875, .115))
+
+
 #plotting species evenness by CT location/forest type - all CT locations
 div_mets %>%
   left_join(., ct[,c("locationID", "habitat")]) %>%
@@ -245,90 +291,117 @@ div_mets %>%
   theme_classic() +
   labs(title = "Species Evenness by CT - all locations", x = "", y = "species evenness index")
 
-
-#species richness by elevation
-ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
-ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
-n_by_ct <- left_join(n_by_ct, ct_elev[,c("locationID", "altitude")])
-
-ggplot(n_by_ct, aes(x = altitude, y = n.all)) +
-  geom_point() +
-  geom_smooth(se = TRUE) +
+#plotting both in same plot
+p3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
+  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  scale_fill_manual(values = c("cornflowerblue","coral3")) +
   theme_classic() +
-  labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
+  labs(title = "Species Evenness", x = "", y = "Evenness Index", fill = "") +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "none", axis.text.y = element_blank(), 
+        plot.title = element_text(hjust = 0.5))
 
-#both 'all CT locations' and "scanned locations' in the same plot to compare
-ggplot(n_by_ct, aes(x = altitude, y = n.all)) +
-  geom_point(data = subset(n_by_ct, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
-  geom_point(data = subset(n_by_ct, !locationID %in% stand_mets$locationID), aes(color = "all")) +
-  geom_smooth(data = subset(n_by_ct, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
-  geom_smooth(data = n_by_ct, aes(color = "all"), se = TRUE) +  
-  scale_color_manual(values = c("scanned" = "red", "all" = "blue")) +  
+plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
+
+
+#species richness by elevation - 'all CT locations' and "scanned locations' in the same plot
+p1 <- ggplot(div_mets, aes(x = altitude, y = n.all)) +
+  geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
+  geom_point(data = subset(div_mets, !locationID %in% stand_mets$locationID), aes(color = "default")) +
+  geom_smooth(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
+  geom_smooth(data = div_mets, aes(color = "all"), se = TRUE) +  
+  scale_color_manual(values = c("scanned" = "red", "all" = "blue", "default" = "black")) +  
   theme_classic() +
-  theme(legend.position = c(0.75, 0.95), legend.title = element_blank()) + 
-  labs(title = "Species Richness by Elevation", x = "elevation (m)", y = "n species")
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Species Richness", x = "elevation (m)", y = "n species")
 
 #shannon diversity by elevation
-shannon_ct %>%
-  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
-  ggplot(aes(x = altitude, y = shannon_ct)) +
-  geom_point() +
-  geom_smooth(se = TRUE) +
+p2 <- ggplot(div_mets, aes(x = altitude, y = shannon_ct)) +
+  geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
+  geom_point(data = subset(div_mets, !locationID %in% stand_mets$locationID), aes(color = "default")) +
+  geom_smooth(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
+  geom_smooth(data = div_mets, aes(color = "all"), se = TRUE) +  
+  scale_color_manual(values = c("scanned" = "red", "all" = "blue", "default" = "black")) +  
   theme_classic() +
-  labs(title = "Shannon Diversity by Elevation", x = "elevation (m)", y = "Shannon Diversity Index")
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Shannon Diversity", x = "elevation (m)", y = "Shannon Diversity Index")
 
 #simpson diversity by elevation
-simp_ct %>%
-  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
-  ggplot(aes(x = altitude, y = simp_ct)) +
-  geom_point() +
-  geom_smooth(se = TRUE) +
+ggplot(div_mets, aes(x = altitude, y = simp_ct)) +
+  geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
+  geom_point(data = subset(div_mets, !locationID %in% stand_mets$locationID), aes(color = "default")) +
+  geom_smooth(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
+  geom_smooth(data = div_mets, aes(color = "all"), se = TRUE) +  
+  scale_color_manual(values = c("scanned" = "red", "all" = "blue", "default" = "black")) +  
   theme_classic() +
-  labs(title = "Simpson Diversity by Elevation", x = "elevation (m)", y = "Simpson Diversity Index")
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Simpson Diversity", x = "elevation (m)", y = "Simpson Diversity Index")
 
 #species evenness by elevation
-div_mets %>%
-  left_join(., ct_elev[,c("locationID", "altitude")]) %>%
-  ggplot(aes(x = altitude, y = div_even)) +
-  geom_point() +
-  geom_smooth(se = TRUE) +
+p3 <- ggplot(div_mets, aes(x = altitude, y = div_even)) +
+  geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
+  geom_point(data = subset(div_mets, !locationID %in% stand_mets$locationID), aes(color = "default")) +
+  geom_smooth(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
+  geom_smooth(data = div_mets, aes(color = "all"), se = TRUE) +  
+  scale_color_manual(values = c("scanned" = "red", "all" = "blue", "default" = "black"),
+                     name = NULL,
+                     breaks = c("scanned", "all"),
+                     labels = c("scanned locations", "all locations")) +  
   theme_classic() +
-  labs(title = "Species Evenness by Elevation", x = "elevation (m)", y = "Species Evenness Index")
+  theme(legend.position = c(.6, .2), plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Species Evenness", x = "elevation (m)", y = "Species Evenness Index")
+
+plot_grid(p1,p2,p3, nrow = 1)
 
 
 ### MODELING
 library(lme4)
+library(glmmTMB)
+library(coefplot)
 library(coefplot2)
 library(PerformanceAnalytics)
+library(fitdistrplus)
 
 #checking correlation between predictors first
 chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","perc.below.2m.sc","stand.dens.sc",
-                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc")])
+                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc",
+                                "n.all", "shannon_ct", "div_even")],
+                  method = "pearson")
+
+#checking distribution family for outcome vars
+plotdist(stand_mets$n.all, histo = TRUE, demp = TRUE)
+plotdist(stand_mets$shannon_ct, histo = TRUE, demp = TRUE)
+plotdist(stand_mets$div_even, histo = TRUE, demp = TRUE)
+
+descdist(stand_mets$n.all, boot = 100)
+descdist(stand_mets$shannon_ct, boot = 100)
+descdist(stand_mets$div_even, boot = 100)
+
 
 ## GLMM
 #species richness as outcome variable - by CT location
-richness_model <- glmer(n.all ~ 
+richness_model <- glm(n.all ~ 
                  max.height.sc +
                  mean.tree.h.sc +
                  CRR.rho.sc +
                  sd.r.sc +
                  mean.dbh.sc +
-                 #basal.area.sc +
+                 basal.area.sc +
                  stand.dens.sc +
                  stem.vol.sc +
-                 perc.below.2m.sc +
-                 (1|habitat/locationID), 
-               family = poisson(link = "log"), 
+                 perc.below.2m.sc,
+               family = Gamma(link = "log"), 
                offset = log(act.days),
                data = stand_mets)
 
 summary(richness_model)
-
 coefplot2(richness_model, top.axis = FALSE, main = "Species Richness",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
 #species diversity as outcome variable - by CT location
-shannon_model <- glmer(shannon_ct ~ 
+shannon_model <- glm(shannon_ct ~ 
                          max.height.sc +
                          mean.tree.h.sc +
                          CRR.rho.sc +
@@ -337,14 +410,36 @@ shannon_model <- glmer(shannon_ct ~
                          basal.area.sc +
                          stand.dens.sc +
                          stem.vol.sc +
-                         perc.below.2m.sc +
-                         (1|habitat), 
-                        family = gaussian(link = "identity"), 
+                         perc.below.2m.sc,
+                        family = Gamma(link = "log"), 
                         offset = log(act.days),
                         data = stand_mets)
 
 summary(shannon_model)
-coefplot2(shannon_model, top.axis = FALSE, main = "Species Diversity (Shannon)",
+coefplot2(shannon_model, top.axis = FALSE, main = "Shannon Diversity",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
-#maybe next I can try some GAM models and/or try to model individual species that are common?
+#species evenness as outcome variable - by CT location
+even_model <- glm(div_even ~ 
+                max.height.sc +
+                mean.tree.h.sc +
+                CRR.rho.sc +
+                sd.r.sc +
+                mean.dbh.sc +
+                basal.area.sc +
+                stand.dens.sc +
+                stem.vol.sc +
+                perc.below.2m.sc,
+              family = Gamma(link = "log"), 
+              offset = log(act.days),
+              data = stand_mets)
+
+summary(even_model)
+coefplot2(even_model, top.axis = FALSE, main = "Species Evenness",
+          cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
+
+#compare coefficients from all plots
+multiplot(richness_model, shannon_model, even_model, intercept = FALSE) + 
+  labs(title = "", x = "coefficient estimate", y = "") +
+  theme_classic() +
+  theme(legend.position = "bottom", legend.box = "horizontal")
