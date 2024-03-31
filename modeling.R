@@ -357,17 +357,15 @@ plot_grid(p1,p2,p3, nrow = 1)
 
 
 ### MODELING
-library(lme4)
-library(glmmTMB)
 library(coefplot)
 library(coefplot2)
 library(PerformanceAnalytics)
 library(fitdistrplus)
+library(MuMIn)
 
 #checking correlation between predictors first
 chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","perc.below.2m.sc","stand.dens.sc",
-                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc",
-                                "n.all", "shannon_ct", "div_even")],
+                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc")],
                   method = "pearson")
 
 #checking distribution family for outcome vars
@@ -376,29 +374,43 @@ plotdist(stand_mets$shannon_ct, histo = TRUE, demp = TRUE)
 plotdist(stand_mets$div_even, histo = TRUE, demp = TRUE)
 
 descdist(stand_mets$n.all, boot = 100)
-descdist(stand_mets$shannon_ct, boot = 100)
+descdist(stand_mets$shannon_ct, boot = 1000)
 descdist(stand_mets$div_even, boot = 100)
 
 
-## GLMM
+## GLM
 #species richness as outcome variable - by CT location
-richness_model <- glm(n.all ~ 
-                 max.height.sc +
-                 mean.tree.h.sc +
-                 CRR.rho.sc +
-                 sd.r.sc +
-                 mean.dbh.sc +
-                 basal.area.sc +
-                 stand.dens.sc +
-                 stem.vol.sc +
-                 perc.below.2m.sc,
-               family = Gamma(link = "log"), 
-               offset = log(act.days),
-               data = stand_mets)
+#fitting global model for use in dredge
+rm1 <- glm(n.all ~  
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc +
+             stand.dens.sc +
+             stem.vol.sc +
+             perc.below.2m.sc,
+           family = Gamma(link = "identity"), 
+           offset = log(act.days),
+           data = stand_mets)
 
-summary(richness_model)
-coefplot2(richness_model, top.axis = FALSE, main = "Species Richness",
+options(na.action = na.fail)
+
+#dredge
+richness_models <- dredge(rm1)
+
+#averaging models with dAIC<2 - this works but idk how to plot coefficients
+rich_models_avg <- model.avg(richness_models, subset = "delta" < 2)
+summary(rich_models_avg)
+
+#selecting top model by AIC
+top_rich_model <- get.models(richness_models, subset = 1)
+
+summary(top_rich_model[[1]])
+coefplot2(top_rich_model[[1]], top.axis = FALSE, main = "Species Richness",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
+
 
 #species diversity as outcome variable - by CT location
 shannon_model <- glm(shannon_ct ~ 
@@ -415,9 +427,21 @@ shannon_model <- glm(shannon_ct ~
                         offset = log(act.days),
                         data = stand_mets)
 
-summary(shannon_model)
-coefplot2(shannon_model, top.axis = FALSE, main = "Shannon Diversity",
+#dredge
+shan_models <- dredge(shannon_model)
+
+#averaging models with dAIC<2
+shan_models_avg <- model.avg(shan_models, subset = "delta" < 2)
+summary(shan_models_avg)
+
+#selecting top model by AIC
+top_shan_model <- get.models(shan_models, subset = 1)
+
+summary(top_shan_model[[1]])
+coefplot2(top_shan_model[[1]], top.axis = FALSE, main = "Shannon Diversity",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
+
+#top 6 models show dAIC<2
 
 #species evenness as outcome variable - by CT location
 even_model <- glm(div_even ~ 
@@ -430,16 +454,31 @@ even_model <- glm(div_even ~
                 stand.dens.sc +
                 stem.vol.sc +
                 perc.below.2m.sc,
-              family = Gamma(link = "log"), 
+              family = Gamma(link = "identity"), 
               offset = log(act.days),
               data = stand_mets)
 
-summary(even_model)
-coefplot2(even_model, top.axis = FALSE, main = "Species Evenness",
+#dredge
+even_models <- dredge(even_model)
+
+#averaging models with dAIC<2
+even_models_avg <- model.avg(even_models, subset = "delta" < 2)
+summary(even_models_avg)
+
+#selecting top model by AIC
+top_even_model <- get.models(even_models, subset = 1)
+
+summary(top_even_model[[1]])
+coefplot2(top_even_model[[1]], top.axis = FALSE, main = "Species Evenness",
           cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
 #compare coefficients from all plots
-multiplot(richness_model, shannon_model, even_model, intercept = FALSE) + 
+multiplot(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], intercept = FALSE) + 
   labs(title = "", x = "coefficient estimate", y = "") +
   theme_classic() +
   theme(legend.position = "bottom", legend.box = "horizontal")
+
+#compare summary tables from all top models
+tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transform = NULL,
+          pred.labels = c("Intercept","Max. Tree h","SD tree h","Tree dens.","CRR"),
+          dv.labels = c("Species Richness","Shannon Diversity","Species Evenness"))
