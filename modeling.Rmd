@@ -1,8 +1,26 @@
-### LiDAR-derived Forest Structure Metrics as Predictors of Mammal Species Richness and Diversity
+---
+title: "terrestrial modeling"
+author: "Gene Estrada"
+date: "2024-05-21"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
 library(tidyverse)
 library(vegan)
 library(cowplot)
+library(coefplot)
+library(PerformanceAnalytics)
+library(fitdistrplus)
+library(MuMIn)
+library(sjPlot)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -52,166 +70,6 @@ tree_mets$partition <- factor(tree_mets$partition, levels = c("PS1", "FS1", "AB1
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
 ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
 
-
-#some observations noted 'Unid' - unidentified to species and/or genus level
-table(m$Species)
-table(m$Genus)
-table(m$Family)
-
-
-### SPECIES RICHNESS 
-
-## Entire Study Area - excluding unid animals
-#all camera trap locations: 55 species
-m %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                      "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(SpeciesRichness = n_distinct(Species))
-
-#only camera trap locations that have LiDAR scan data: 52 species
-m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(SpeciesRichness = n_distinct(Species))
-
-## By Forest Type - excluding unid animals
-#all ct locations
-n_by_ft <- m %>%
-  group_by(habitat) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(n.all = n_distinct(Species)) %>%
-  arrange(desc(habitat)) %>%
-  print()
-
-#only scanned locations
-n_by_ft <- m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  group_by(habitat) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(n.scanned = n_distinct(Species)) %>%
-  left_join(n_by_ft) %>%
-  arrange(desc(habitat)) %>% 
-  print()
-
-#the scanned sites consistently observe fewer species over the study period by 4 - 10 species
-#more bias in the higher elevation FT's, especially the montane
-n_by_ft$diff <- n_by_ft$n.all - n_by_ft$n.scanned
-n_by_ft
-
-## By partition - excluding unid animals
-#all ct locations
-n_by_pt <- m %>%
-  group_by(partition) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(n.all = n_distinct(Species)) %>%
-  arrange(desc(partition)) %>%
-  print()
-
-#only scanned locations
-n_by_pt <- m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  group_by(partition) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(n.scanned = n_distinct(Species)) %>%
-  left_join(n_by_pt) %>%
-  arrange(desc(partition)) %>% 
-  print()
-
-#the scanned sites consistently observe fewer species but this is especially true in UG1 and LS2
-n_by_pt$diff <- n_by_pt$n.all - n_by_pt$n.scanned
-n_by_pt
-
-## By Camera Trap Location - excluding unid animals
-#all CT locations
-n_by_ct <- m %>%
-  group_by(locationID) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
-  summarise(n.all = n_distinct(Species))
-
-#compare 'all CT' and 'scanned CT' location richness distributions
-#the 'scanned CT' locations seem biased towards higher species richness
-hist(n_by_ct$n.all, breaks = 30)
-hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 30, xlim = c(0,30))
-
-summary(n_by_ct$n.all)
-summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
-
-
-### SPECIES DIVERSITY
-
-## Shannon Diveristy
-## by camera trap location
-shannon_ct <- diversity(table(m$locationID, m$Species), index = "shannon")
-shannon_ct <- rownames_to_column(as.data.frame(shannon_ct), var = "locationID")
-shannon_ct$locationID <- as.integer(shannon_ct$locationID)
-
-#compare 'all CT' and 'scanned CT' location Shannon Diversity value distributions
-#the 'scanned CT' locations seem slightly biased towards higher diversity values
-hist(shannon_ct$shannon_ct, breaks = 50, xlim = c(0,3))
-hist(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID], breaks = 50, xlim = c(0,3))
-
-summary(shannon_ct$shannon_ct)
-summary(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID])
-
-## by forest type
-shannon_all <- diversity(table(m$habitat, m$Species), index = "shannon")
-shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "habitat")
-
-shannon_scan <- diversity(table(m$habitat[shannon_ct$locationID %in% stand_mets$locationID], 
-                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
-shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "habitat")
-shannon_ft <- left_join(shannon_all, shannon_scan)
-rm(shannon_scan, shannon_all)
-
-#again, using only the CT's that were scanned leads to most bias in the montane forest
-shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
-shannon_ft
-
-## by partition
-shannon_all <- diversity(table(m$partition, m$Species), index = "shannon")
-shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "partition")
-
-shannon_scan <- diversity(table(m$partition[shannon_ct$locationID %in% stand_mets$locationID], 
-                                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
-shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "partition")
-shannon_pt <- left_join(shannon_all, shannon_scan)
-rm(shannon_scan, shannon_all)
-
-#again, using only the CT's that were scanned leads to most bias in the montane forest
-shannon_pt$diff <- shannon_pt$shannon_all - shannon_pt$shannon_scan
-shannon_pt
-
-## Simpson Diversity
-#by CT location
-simp_ct <- diversity(table(m$locationID, m$Species), index = "simpson")
-simp_ct <- rownames_to_column(as.data.frame(simp_ct), var = "locationID")
-simp_ct$locationID <- as.integer(simp_ct$locationID)
-
-#compare 'all CT' and 'scanned CT' location Simpson Diversity value distributions
-#distributions look similar
-hist(simp_ct$simp_ct, breaks = 50, xlim = c(0,1))
-hist(simp_ct$simp_ct[simp_ct$locationID %in% stand_mets$locationID], breaks = 50, xlim = c(0,1))
-
-
-#adding species richness and diversity data to stand metrics table
-stand_mets <- left_join(stand_mets, n_by_ct)
-stand_mets <- left_join(stand_mets, shannon_ct)
-stand_mets <- left_join(stand_mets, simp_ct)
-
-#calculating Pielou's diversity measure of species evenness
-div_mets <- shannon_ct %>%
-  left_join(., n_by_ct) %>%
-  mutate(div_even = shannon_ct/log(n.all)) %>%
-  left_join(simp_ct)
-div_mets$div_even[div_mets$div_even == "NaN"] <- 0
-
-
 #add CT survey effort data
 ct2 <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
 ct_active_days <- ct2 %>%
@@ -224,17 +82,187 @@ ct_active_days <- ct2 %>%
   summarise(act.days = sum(act.per)) %>%
   rename(locationID = Deployment.Location.ID)
 
-stand_mets <- left_join(stand_mets, ct_active_days)  
+stand_mets <- left_join(stand_mets, ct_active_days) 
+```
+
+
+## SPECIES RICHNESS 
+
+### Entire Study Area
+
+Excluding unid animals.
+all camera trap locations: 55 species. Compared to only CT locations that have LiDAR data: 52 species
+```{r}
+#all camera trap locations: 55 species
+m %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                      "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(SpeciesRichness = n_distinct(Species))
+
+#only camera trap locations that have LiDAR scan data: 52 species
+m %>%
+  filter(locationID %in% stand_mets$locationID) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(SpeciesRichness = n_distinct(Species))
+```
+
+### By forest type
+
+Excluding unid animals
+```{r}
+#all ct locations
+n_by_ft <- m %>%
+  group_by(habitat) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.all = n_distinct(Species)) %>%
+  arrange(desc(habitat))
+
+#only scanned locations
+n_by_ft <- m %>%
+  filter(locationID %in% stand_mets$locationID) %>%
+  group_by(habitat) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.scanned = n_distinct(Species)) %>%
+  left_join(n_by_ft) %>%
+  arrange(desc(habitat))
+
+#the scanned sites consistently observe fewer species over the study period by 4 - 10 species
+#more bias in the higher elevation FT's, especially the montane
+n_by_ft$diff <- n_by_ft$n.all - n_by_ft$n.scanned
+n_by_ft
+```
+
+### By partition
+
+Excluding unid animals
+```{r}
+#all ct locations
+n_by_pt <- m %>%
+  group_by(partition) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.all = n_distinct(Species)) %>%
+  arrange(desc(partition))
+
+#only scanned locations
+n_by_pt <- m %>%
+  filter(locationID %in% stand_mets$locationID) %>%
+  group_by(partition) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.scanned = n_distinct(Species)) %>%
+  left_join(n_by_pt) %>%
+  arrange(desc(partition))
+
+#the scanned sites consistently observe fewer species but this is especially true in UG1 and LS2
+n_by_pt$diff <- n_by_pt$n.all - n_by_pt$n.scanned
+n_by_pt
+```
+
+### By camera trap location
+
+Excluding unid animals
+
+```{r}
+#all CT locations
+n_by_ct <- m %>%
+  group_by(locationID) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.all = n_distinct(Species))
+
+#compare 'all CT' and 'scanned CT' location richness distributions
+#the 'scanned CT' locations seem biased towards higher species richness
+hist(n_by_ct$n.all, breaks = 30,
+     main = "species richness - all ct locations", xlab = "n species")
+summary(n_by_ct$n.all)
+
+hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 30, xlim = c(0,30),
+     main = "species richness - scanned ct locations only", xlab = "n species")
+summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
+```
+
+## SHANNON DIVERSITY
+### By camera trap location
+```{r}
+shannon_ct <- diversity(table(m$locationID, m$Species), index = "shannon")
+shannon_ct <- rownames_to_column(as.data.frame(shannon_ct), var = "locationID")
+shannon_ct$locationID <- as.integer(shannon_ct$locationID)
+
+#compare 'all CT' and 'scanned CT' location Shannon Diversity value distributions
+#the 'scanned CT' locations seem slightly biased towards higher diversity values
+hist(shannon_ct$shannon_ct, breaks = 50, xlim = c(0,3),
+     main = "species diversity - all ct locations", xlab = "Shannon Diversity Index")
+summary(shannon_ct$shannon_ct)
+
+hist(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID], breaks = 50, xlim = c(0,3),
+     main = "species diversity - scanned ct locations only", xlab = "Shannon Diversity Index")
+summary(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID])
+```
+
+### By partition
+```{r}
+shannon_all <- diversity(table(m$partition, m$Species), index = "shannon")
+shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "partition")
+
+shannon_scan <- diversity(table(m$partition[shannon_ct$locationID %in% stand_mets$locationID], 
+                                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
+shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "partition")
+shannon_pt <- left_join(shannon_all, shannon_scan)
+rm(shannon_scan, shannon_all)
+
+shannon_pt$diff <- shannon_pt$shannon_all - shannon_pt$shannon_scan
+shannon_pt
+```
+
+### By forest type
+```{r}
+#calculating shannon diversity index for all and scanned CT locations
+shannon_all <- diversity(table(m$habitat, m$Species), index = "shannon")
+shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "habitat")
+
+shannon_scan <- diversity(table(m$habitat[shannon_ct$locationID %in% stand_mets$locationID], 
+                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
+shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "habitat")
+shannon_ft <- left_join(shannon_all, shannon_scan)
+rm(shannon_scan, shannon_all)
+
+#calculating difference between all and scanned locations shannon index
+shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
+shannon_ft
+```
+
+## SPECIES EVENNESS
+
+### By camera trap location
+
+Pielou's diversity measure of species evenness
+```{r}
+div_mets <- shannon_ct %>%
+  left_join(., n_by_ct) %>%
+  mutate(div_even = shannon_ct/log(n.all))
+div_mets$div_even[div_mets$div_even == "NaN"] <- 0
+
+hist(div_mets$div_even, breaks = 25,
+     main = "species evenness", xlab = "Pielou's Evenness Index")
+```
+
+adding diversity metrics to forest structure metrics df
+```{r}
 stand_mets <- left_join(stand_mets, div_mets[,c("locationID","div_even")])
 stand_mets$div_even <- as.numeric(stand_mets$div_even)
 
+stand_mets <- left_join(stand_mets, n_by_ct)
 
-#scale and center all numeric predictors 
-stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
+stand_mets <- left_join(stand_mets, shannon_ct)
+```
 
 
 ## Richness and diversity visualization
-
+```{r, include=FALSE}
 #add habitat data to diversity metrics table
 div_mets <- left_join(div_mets, ct[,c("locationID","habitat","partition","altitude")])
 div_mets$habitat <- factor(div_mets$habitat, levels = c("Peat Swamp","Freshwater Swamp","Alluvial Bench",
@@ -247,24 +275,11 @@ div_mets_viz <- div_mets
 div_mets_viz_scan <- div_mets_viz[div_mets_viz$dataset == "scanned",]
 div_mets_viz$dataset <- "all"
 div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
+```
 
-#plotting species richness by CT location/forest type - all locations
-ggplot(div_mets, aes(x = habitat, y = n.all)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  labs(title = "Species Richness by CT - all locations", x = "", y = "n species")
-
-#plotting species richness by CT location/forest type - scanned sites only
-ggplot(div_mets[div_mets$locationID %in% stand_mets$locationID,], aes(x = habitat, y = n.all)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  labs(title = "Species Richness by CT - scanned sites", x = "", y = "n species")
-
-#plotting both in same plot
+### All diversity metrics by CT location/forest type
+```{r fig.height=4, fig.width=10}
+#plotting richness by all and scanned locations in same plot 
 p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
@@ -274,29 +289,7 @@ p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
   coord_flip() +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
 
-#plotting Shannon diversity by CT location/forest type - all CT locations
-shannon_ct %>%
-  left_join(., ct[,c("locationID", "habitat")]) %>%
-  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
-                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
-  ggplot(aes(x = habitat, y = shannon_ct)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  ylim(0, 3) +
-  labs(title = "Shannon Diversity by CT - all locations", x = "", y = "n species")
-
-#plotting Shannon diversity by CT location/forest type - scanned sites only
-ggplot(stand_mets, aes(x = habitat, y = shannon_ct)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  ylim(0, 3) +
-  labs(title = "Shannon Diversity by CT", x = "", y = "Shannon Diversity Index")
-
-#plotting both in same plot
+#plotting diversity by all and scanned locations in same plot 
 p2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
@@ -307,50 +300,7 @@ p2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
   theme(legend.position = "none", axis.text.y = element_blank(), 
         plot.title = element_text(hjust = 0.5))
 
-#plotting Simpson Diversity by CT/forest type - all CT locations
-simp_ct %>%
-  left_join(., ct[,c("locationID", "habitat")]) %>%
-  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
-                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
-  ggplot(aes(x = habitat, y = simp_ct)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  labs(title = "Simpson Diversity by CT - all locations", x = "", y = "Simpson Diversity Index")
-
-#plotting Simpson diversity by CT location/forest type - scanned sites only
-ggplot(stand_mets, aes(x = habitat, y = simp_ct)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  labs(title = "Simpson Diversity by CT - scanned locations", x = "", y = "Simpson Diversity Index")
-
-#plotting both in same plot
-ggplot(div_mets_viz, aes(x = habitat, y = simp_ct, fill = dataset)) +
-  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
-  geom_jitter(position = position_dodge(width = 0.75)) +
-  theme_classic() +
-  labs(title = "Simpson Diversity", x = "", y = "Simpson Diversity Index", fill = "") +
-  coord_flip() +
-  guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) +
-  theme(legend.position = c(.875, .115))
-
-
-#plotting species evenness by CT location/forest type - all CT locations
-div_mets %>%
-  left_join(., ct[,c("locationID", "habitat")]) %>%
-  mutate(habitat = factor(habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", "Lowland Sandstone", 
-                                              "Lowland Granite", "Upland Granite", "Montane"))) %>%
-  ggplot(aes(x = habitat, y = div_even)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.2) +
-  coord_flip() +
-  theme_classic() +
-  labs(title = "Species Evenness by CT - all locations", x = "", y = "species evenness index")
-
-#plotting both in same plot
+#plotting evenness by all and scanned locations in same plot 
 p3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
@@ -362,9 +312,11 @@ p3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
   theme(legend.position = "none", axis.text.y = element_blank(), 
         plot.title = element_text(hjust = 0.5))
 
-plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
+cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
+```
 
-
+### All diversity metrics by elevation
+```{r fig.height=4, fig.width=10}
 #species richness by elevation - 'all CT locations' and "scanned locations' in the same plot
 p1 <- ggplot(div_mets, aes(x = altitude, y = n.all)) +
   geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
@@ -387,17 +339,6 @@ p2 <- ggplot(div_mets, aes(x = altitude, y = shannon_ct)) +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
   labs(title = "Shannon Diversity", x = "elevation (m)", y = "Shannon Diversity Index")
 
-#simpson diversity by elevation
-ggplot(div_mets, aes(x = altitude, y = simp_ct)) +
-  geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
-  geom_point(data = subset(div_mets, !locationID %in% stand_mets$locationID), aes(color = "default")) +
-  geom_smooth(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned"), se = TRUE) +
-  geom_smooth(data = div_mets, aes(color = "all"), se = TRUE) +  
-  scale_color_manual(values = c("scanned" = "red", "all" = "blue", "default" = "black")) +  
-  theme_classic() +
-  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
-  labs(title = "Simpson Diversity", x = "elevation (m)", y = "Simpson Diversity Index")
-
 #species evenness by elevation
 p3 <- ggplot(div_mets, aes(x = altitude, y = div_even)) +
   geom_point(data = subset(div_mets, locationID %in% stand_mets$locationID), aes(color = "scanned")) +
@@ -412,36 +353,33 @@ p3 <- ggplot(div_mets, aes(x = altitude, y = div_even)) +
   theme(legend.position = c(.6, .2), plot.title = element_text(hjust = 0.5)) + 
   labs(title = "Species Evenness", x = "elevation (m)", y = "Species Evenness Index")
 
-plot_grid(p1,p2,p3, nrow = 1)
+cowplot::plot_grid(p1,p2,p3, nrow = 1)
+```
 
 
-### MODELING
-library(coefplot)
-library(coefplot2)
-library(PerformanceAnalytics)
-library(fitdistrplus)
-library(MuMIn)
-library(sjPlot)
+## MODELING
+```{r}
+#scale and center numeric predictors
+stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
+```
 
-#checking correlation between predictors first
-#basal area is highly correlated (>0.8) with stem vol and stand dens
+Check correlation between predictors.
+Basal area is highly correlated (>0.8) with stem volume and stand density
+```{r}
 chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","perc.below.2m.sc","stand.dens.sc",
                                 "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc", "zentropy.sc",
                                 "lad.max.sc","rumple.sc","vFRcanopy.sc","vzrumple.sc","ClosedGapSpace.sc")],
                   method = "spearman")
+```
 
-#checking distribution family for diversity outcome vars
-plotdist(stand_mets$n.all, histo = TRUE, demp = TRUE)
-plotdist(stand_mets$shannon_ct, histo = TRUE, demp = TRUE)
-plotdist(stand_mets$div_even, histo = TRUE, demp = TRUE)
+### Models by camera trap location
 
-descdist(stand_mets$n.all, boot = 100)
-descdist(stand_mets$shannon_ct, boot = 1000)
-descdist(stand_mets$div_even, boot = 100)
+#### Species richness model
 
+Fitting global model then using {dredge} to find models of best fit. 
 
-## GLM
-#species richness as outcome variable - by CT location
+Top model summary output
+```{r}
 #fitting global model for use in dredge
 rm1 <- glm(n.all ~  
              max.height.sc +
@@ -449,7 +387,7 @@ rm1 <- glm(n.all ~
              CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
-             #basal.area.sc + #leaving out due to high corr - model doesn't converge
+             #basal.area.sc + #removing due to cor - model doesn't converge when added
              stand.dens.sc +
              stem.vol.sc +
              pts.below.2m.sc +
@@ -466,20 +404,31 @@ rm1 <- glm(n.all ~
 #dredge
 rich_models <- dredge(rm1)
 
-#averaging models with dAIC<2 - this works but idk how to plot coefficients
-#https://stackoverflow.com/questions/54962119/how-to-plot-from-mumin-model-avg-summary 
-rich_models_avg <- model.avg(rich_models, subset = "delta" < 2)
-summary(rich_models_avg)
-
 #selecting top model by AIC
 top_rich_model <- get.models(rich_models, subset = 1)
 
 summary(top_rich_model[[1]])
-coefplot2(top_rich_model[[1]], top.axis = FALSE, main = "Species Richness",
-          cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
+
+plotcoef(top_rich_model[[1]], intercept = FALSE, title = "Species Richness Model", ylab = "") +
+  theme_classic() +
+  scale_y_discrete(labels = rev(c("vert. rumple","vert. complexity","max. h","gap vol.")))
+```
+
+averaged model output - averaging top models (delta AIC values < 2)
+```{r}
+#averaging models with dAIC<2 - this works but I don't know how to plot coefficients
+rich_models_avg <- model.avg(rich_models, subset = "delta" < 2)
+
+summary(rich_models_avg)
+
+plot(rich_models_avg, full = NA, intercept = FALSE, main = "Species Richness Model-Averaged Coefficients")
+```
 
 
+#### Species diversity model
 
+Top model summary output
+```{r}
 #species diversity as outcome variable - by CT location
 shannon_model <- glm(shannon_ct ~ 
                          max.height.sc +
@@ -505,20 +454,31 @@ shannon_model <- glm(shannon_ct ~
 #dredge
 shan_models <- dredge(shannon_model)
 
-#averaging models with dAIC<2
-shan_models_avg <- model.avg(shan_models, subset = "delta" < 2)
-summary(shan_models_avg)
-
 #selecting top model by AIC
 top_shan_model <- get.models(shan_models, subset = 1)
 
 summary(top_shan_model[[1]])
-coefplot2(top_shan_model[[1]], top.axis = FALSE, main = "Shannon Diversity",
-          cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
-#top 6 models show dAIC<2
+plotcoef(top_shan_model[[1]], intercept = FALSE, title = "Species Diversity Model", ylab = "") +
+  theme_classic() +
+  scale_y_discrete(labels = rev(c("vert. complexity","veg. vol.","leaf area dens.")))
+```
 
-#species evenness as outcome variable - by CT location
+averaged model output - averaging top models (delta AIC values < 2)
+```{r}
+#averaging models with dAIC<2
+shan_models_avg <- model.avg(shan_models, subset = "delta" < 2)
+
+summary(shan_models_avg)
+
+plot(shan_models_avg, full = NA, intercept = FALSE, main = "Species Diversity Model-Averaged Coefficients")
+```
+
+
+#### Species evenness model
+
+Top model summary output
+```{r}
 even_model <- glm(div_even ~ 
                 max.height.sc +
                 mean.tree.h.sc +
@@ -539,34 +499,45 @@ even_model <- glm(div_even ~
               family = Gamma(link = "log"), 
               offset = log(act.days),
               data = stand_mets)
-
 #dredge
 even_models <- dredge(even_model)
-
-#averaging models with dAIC<2
-even_models_avg <- model.avg(even_models, subset = "delta" < 2)
-summary(even_models_avg)
 
 #selecting top model by AIC
 top_even_model <- get.models(even_models, subset = 1)
 
 summary(top_even_model[[1]])
-coefplot2(top_even_model[[1]], top.axis = FALSE, main = "Species Evenness",
-          cex.pts = 1.5, lwd.1 = 4, lwd.2 = 2)
 
-#compare coefficients from all plots
+plotcoef(top_even_model[[1]], intercept = FALSE, title = "Species Evenness Model", ylab = "") +
+  theme_classic() +
+  scale_y_discrete(labels = rev(c("vert. complexity","stand dens.","leaf area dens.")))
+```
+
+averaged model output - averaging top models (delta AIC values < 2)
+```{r}
+#averaging models with dAIC<2
+even_models_avg <- model.avg(even_models, subset = "delta" < 2)
+
+summary(even_models_avg)
+
+plot(even_models_avg, full = NA, intercept = FALSE, main = "Species Evenness Model-Averaged Coefficients")
+```
+
+comparing coefficient plot from the three top models 
+```{r}
 multiplot(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], intercept = FALSE, 
           decreasing = TRUE, names = c("richness","diversity","evenness")) + 
   labs(title = "", x = "coefficient estimate", y = "") +
   theme_classic() +
   theme(legend.position = "bottom", legend.box = "horizontal") +
-  scale_y_discrete(labels = rev(c("tree dens.","vert. complexity","leaf area dens.",
-                            "rugosity","veg. vol.","max. h","gap vol.")))
+  scale_y_discrete(labels = rev(c("tree dens.","leaf area dens.","vert. complexity",
+                            "gap vol.","max. tree h","veg. vol.","vert. rumple")))
+```
 
-
-#compare summary tables from all top models
+summary table comparing the three top models 
+```{r}
 tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transform = NULL,
-          #pred.labels = c("Intercept","Max. Tree h","SD tree h","Tree dens.","CRR"), #fix names
           dv.labels = c("Species Richness","Shannon Diversity","Species Evenness")
-          #file = "table1.xls"                                                        #export as Excel file for manuscript submission
+          #, file = "table1.xls"   #export as Excel file for manuscript submission
           )
+```
+
