@@ -7,9 +7,22 @@ library(cowplot)
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
 m <- m[,-1]
+
+#adding updated CT location forest type and partition data
+ct <- read.csv(file = "data/CTlocations_partitions_May2024.csv", header = TRUE)
+
+#removing lat, long, and habitat designations and adding updated versions
+m <- m[,-c(12:14)]
+m <- left_join(m, ct[,c("locationID","latitude","longitude","habitat","partition")], by = "locationID")
+
 #ordering forest type
 m$habitat <- factor(m$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
-                                          "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"))
+                                          "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"),
+                    ordered = TRUE)
+#ordering partitions
+m$partition <- factor(m$partition, levels = c("PS1", "FS1", "AB1", "AB2",
+                                          "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
+                    ordered = TRUE)
 
 #mammal observation table
 species_table <- as.data.frame(table(m$Species, m$habitat))
@@ -19,17 +32,26 @@ colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
 
 #LiDAR-derived metrics data
 stand_mets <- read.csv(file = "data/select.stand.mets.csv", header = TRUE)
-stand_mets <- stand_mets[,-1]
 stand_mets$habitat <- factor(stand_mets$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
-                                          "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"))
+                                          "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"),
+                             ordered = TRUE)
+stand_mets$partition <- factor(stand_mets$partition, levels = c("PS1", "FS1", "AB1", "AB2",
+                                              "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
+                      ordered = TRUE)
 
+#all tree metrics
 tree_mets <- read.csv(file = "data/all.tree.mets.csv", header = TRUE)
-tree_mets <- tree_mets[,-1]
 tree_mets$habitat <- factor(tree_mets$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
-                                                            "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"))
+                                                            "Lowland Sandstone", "Lowland Granite",
+                                                          "Upland Granite", "Montane"),
+                            ordered = TRUE)
+tree_mets$partition <- factor(tree_mets$partition, levels = c("PS1", "FS1", "AB1", "AB2",
+                                                                "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
+                               ordered = TRUE)
 #camera trap data
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
 ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
+
 
 #some observations noted 'Unid' - unidentified to species and/or genus level
 table(m$Species)
@@ -60,7 +82,8 @@ n_by_ft <- m %>%
   filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
                           "Unid civet","Unid rat","Unid squirrel"))) %>%
   summarise(n.all = n_distinct(Species)) %>%
-  arrange(desc(habitat))
+  arrange(desc(habitat)) %>%
+  print()
 
 #only scanned locations
 n_by_ft <- m %>%
@@ -70,12 +93,38 @@ n_by_ft <- m %>%
                           "Unid civet","Unid rat","Unid squirrel"))) %>%
   summarise(n.scanned = n_distinct(Species)) %>%
   left_join(n_by_ft) %>%
-  arrange(desc(habitat))
+  arrange(desc(habitat)) %>% 
+  print()
 
 #the scanned sites consistently observe fewer species over the study period by 4 - 10 species
 #more bias in the higher elevation FT's, especially the montane
 n_by_ft$diff <- n_by_ft$n.all - n_by_ft$n.scanned
 n_by_ft
+
+## By partition - excluding unid animals
+#all ct locations
+n_by_pt <- m %>%
+  group_by(partition) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.all = n_distinct(Species)) %>%
+  arrange(desc(partition)) %>%
+  print()
+
+#only scanned locations
+n_by_pt <- m %>%
+  filter(locationID %in% stand_mets$locationID) %>%
+  group_by(partition) %>%
+  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
+                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  summarise(n.scanned = n_distinct(Species)) %>%
+  left_join(n_by_pt) %>%
+  arrange(desc(partition)) %>% 
+  print()
+
+#the scanned sites consistently observe fewer species but this is especially true in UG1 and LS2
+n_by_pt$diff <- n_by_pt$n.all - n_by_pt$n.scanned
+n_by_pt
 
 ## By Camera Trap Location - excluding unid animals
 #all CT locations
@@ -124,6 +173,19 @@ rm(shannon_scan, shannon_all)
 shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
 shannon_ft
 
+## by partition
+shannon_all <- diversity(table(m$partition, m$Species), index = "shannon")
+shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "partition")
+
+shannon_scan <- diversity(table(m$partition[shannon_ct$locationID %in% stand_mets$locationID], 
+                                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
+shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "partition")
+shannon_pt <- left_join(shannon_all, shannon_scan)
+rm(shannon_scan, shannon_all)
+
+#again, using only the CT's that were scanned leads to most bias in the montane forest
+shannon_pt$diff <- shannon_pt$shannon_all - shannon_pt$shannon_scan
+shannon_pt
 
 ## Simpson Diversity
 #by CT location
@@ -150,8 +212,8 @@ div_mets <- shannon_ct %>%
 div_mets$div_even[div_mets$div_even == "NaN"] <- 0
 
 #add CT survey effort data
-ct <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
-ct_active_days <- ct %>%
+ct2 <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
+ct_active_days <- ct2 %>%
   select(Deployment.Location.ID, Camera.Deployment.Begin.Date, Camera.Deployment.End.Date) %>%
   mutate(Camera.Deployment.Begin.Date = as.Date(Camera.Deployment.Begin.Date),
          Camera.Deployment.End.Date   = as.Date(Camera.Deployment.End.Date)) %>%
@@ -164,20 +226,15 @@ ct_active_days <- ct %>%
 stand_mets <- left_join(stand_mets, ct_active_days)  
 stand_mets <- left_join(stand_mets, div_mets[,c("locationID","div_even")])
 
+
 #scale and center all numeric predictors 
-stand_mets <- stand_mets %>%
-  mutate(across(8:19, scale, .names = "{.col}.sc"))
+stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
 
 
 ## Richness and diversity visualization
-ct <- ct %>%
-  rename(locationID   = Deployment.Location.ID,
-         habitat      = Treatment.Strata,
-         location     = Location,
-         on.off.trail = Feature.Type)
 
 #add habitat data to diversity metrics table
-div_mets <- left_join(div_mets, ct_elev[,c("locationID","habitat","altitude")])
+div_mets <- left_join(div_mets, ct[,c("locationID","habitat","partition","altitude")])
 div_mets$habitat <- factor(div_mets$habitat, levels = c("Peat Swamp","Freshwater Swamp","Alluvial Bench",
                                                         "Lowland Sandstone","Lowland Granite",
                                                         "Upland Granite","Montane"))
@@ -189,7 +246,7 @@ div_mets_viz_scan <- div_mets_viz[div_mets_viz$dataset == "scanned",]
 div_mets_viz$dataset <- "all"
 div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
 
-#plotting species richness by CT location/forest type - all CT locations only
+#plotting species richness by CT location/forest type - all locations
 ggplot(div_mets, aes(x = habitat, y = n.all)) +
   geom_boxplot() +
   geom_jitter(width = 0.2) +
