@@ -363,6 +363,46 @@ cowplot::plot_grid(p1,p2,p3, nrow = 1)
 stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
 ```
 
+#### Descriptions of forest structure metrics used in models
+
+I used {FORTLS} to extract the following metrics: 
+
+1. max.height - maximum height of trees in the stand, in m
+
+2. mean.tree.h - mean tree height in the stand, in m.
+
+3. CRR.rho - canopy relief ratio, using rho for horizontal distance. A measure of canopy variation, with lower scores indicating lower local variation in canopy surface, i.e., more uniform age canopy/ less canopy surface complexity. 
+
+4. sd.r - standard deviation of tree heights in stand in m. I've seen this value used as an approximation for vertical stratification.  
+
+5. mean.dbh - mean diameter at breast height of trees in stand, in cm (measured at height of 1.3m)
+
+6. basal.area - basal area of trees in the stand (m2/ha)
+
+7. stand.dens - density of trees in the stand (trees/ha)
+
+8. stem.vol - volume of trees in the stand (m3/ha)
+
+9. pts.below.2m - shows the number of points in the point cloud that are below 2m. 
+
+
+I used {lidr} and {lidRmetrics} to extract the following metrics:
+
+10. zentropy - normalized Shannon diversity index of z (height) values. Decsribes vertical complexity.
+
+11. lad.max - Leaf Area Density maximum value for 1m vertical bins. Describes maximum foliage cover of the point cloud. 
+
+12. rumple - Rumple index (rugosity), a ratio of the canopy surface area to it's projected ground area. 
+
+vn - number of 1m voxels created for the following volumetric metrics.
+
+13. vFRcanopy - ratio of filled to empty voxels, only counting cells within and below canopy, ignoring above. 
+14. vzrumple - vertical Rumple index.
+
+15. ClosedGapSpace - volume of voxels that are classified as gaps underneath the canopy
+
+
+
 Check correlation between predictors.
 Basal area is highly correlated (>0.8) with stem volume and stand density
 ```{r}

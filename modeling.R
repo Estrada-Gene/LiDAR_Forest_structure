@@ -570,3 +570,223 @@ tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transfo
           dv.labels = c("Species Richness","Shannon Diversity","Species Evenness")
           #file = "table1.xls"                                                        #export as Excel file for manuscript submission
           )
+
+
+############################################################################################################
+
+## Census data
+
+#importing census summary data - creating diversity metrics to compare to the CT observations
+
+library(tidyverse)
+library(vegan)
+library(cowplot)
+
+#reading in unique census sightings table
+c <- read.csv(file = "data/all_uniquecensus sightings.csv", header = TRUE)
+head(c)
+#some animal ID's are in both upper and lower case. Also removing white spaces before and after characters
+c$animal <- toupper(c$animal)
+c$animal <- trimws(c$animal)
+
+#3,976 unique CID's
+table(c$cid)
+length(table(c$cid))
+
+#every id is unique to the row (22,404)
+table(c$id)
+length(table(c$id))
+
+#reading in census segments table
+ca <- read.csv(file = "data/census_analysis_all_segments.csv", header = TRUE)
+head(ca)
+
+#looking at 'meta_id' column - there are 4,081 unique ID's (is this the CID from the 'c' table?)
+table(ca$meta_id)
+length(table(ca$meta_id))
+
+#every CID from the c table matches a value in the meta_id column
+table(c$cid %in% ca$meta_id)
+
+#how many census routes are there?
+table(ca$census)
+length(table(ca$census))  #34
+
+#there are some segments that don't have a forest type or partition designation
+table(ca$habitat)
+table(ca$partishun)
+
+#the routes w/o hab or part designations are 15, 16, and 17 A and B
+ca[ca$habitat == "NULL",]
+table(ca$census[ca$habitat == "NULL"])
+
+#assigning ft and partition data to the observation table
+p <- read.csv("data/cptrails_all-ajm.csv", header = TRUE)
+#11 segments without habitat data - these are the segments labeled AB 17 - AB 999, for example
+table(p$habitat)
+table(p$partition)
+
+#subsetting only segment, hab, and part columns
+p <- p[,2:5]
+unique_values <- unique(as.data.frame(c(p$pointfrom, p$pointto)))
+
+#creating list of trail names in main study area
+trails <- separate(p, pointfrom, into = c("trail","num"), sep = "-", remove = FALSE) %>%
+  select("trail") %>%
+  unique() %>%
+  pull(trail)
+
+#adding two trails manually - might also want to add SA
+trails <- c(trails, "AG", "BR")
+
+table(c$trail %in% trails)
+
+#formatting the trail and trailmarker columns to match those in the partitions table
+c$marker <- as.integer(c$trailmark)
+c$marker <- formatC(c$marker, width = 3, format = "d", flag = "0")
+c$pointfrom <-  paste(c$trail, c$marker, sep = "-")
+
+#joining and filtering for trails only in the study area
+test <- left_join(c, p, by = "pointfrom")
+
+#all of the non-matching trails are rangkong trails except AG and BR, maybe SA and others too, though
+#maybe I should add those two to the trail list above before filtering
+#I might also think about imputing the forest type and partitions where the trail markers are NULL
+table(test$trail[!test$trail %in% trails]) #some trails are listed as NULL
+test <- test[test$trail %in% trails,]
+
+#there are still NA's 
+table(is.na(test$habitat))
+table(is.na(test$partition))
+
+table(test$trail[is.na(test$habitat) == TRUE])
+
+
+#grouping observations by forest type and partition across study period
+#can't do this by census tract since many cover multiple forest types, might not make sense for my analyses
+obs_tab_ft <- test %>% 
+  group_by(habitat, animal) %>%
+  summarise(n = sum(as.numeric(n_indiv))) %>%
+  pivot_wider(names_from = 'animal', values_from = 'n') %>%
+  filter(habitat != "", !is.na(habitat))  #removing the rows associated with no hab designation 
+
+obs_tab_ft$habitat <- factor(obs_tab_ft$habitat, 
+                           levels = c("PS", "FS","AB","LS","LG","UG", "MO"),
+                             ordered = TRUE)
+
+obs_tab_pt <- test %>% 
+  group_by(partition, animal) %>%
+  summarise(n = sum(as.numeric(n_indiv))) %>%
+  pivot_wider(names_from = 'animal', values_from = 'n') %>%
+  filter(partition != "", !is.na(partition)) #removing the rows associated with no part designation 
+
+obs_tab_pt$partition <- factor(obs_tab_pt$partition, 
+                           levels = c("PS.I","FS.I","AB.I","AB.II","LS.I","LS.II",
+                                      "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
+                           ordered = TRUE)
+
+### species richness - I should control for effort starting here and move the effort code up to this chunk
+
+#by entire study area
+length(obs_tab_ft[,-1]) #183 unique species observed
+
+#by forest type
+div_tab_ft <- obs_tab_ft %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(habitat = 1, richness) %>%
+  arrange(desc(habitat))
+
+#by partition
+div_tab_pt <- obs_tab_pt %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(partition = 1, richness) %>%
+  arrange(desc(partition))
+
+
+### shannon diversity - controlling for effort, but I'm not sure if I need to do this
+
+#by entire study area - not controlling for survey effory
+diversity(colSums(obs_tab_ft[,-1], na.rm = TRUE), index = "shannon")
+
+#by forest type
+obs_tab_ft[is.na(obs_tab_ft)] <- 0
+#adding survey effort
+obs_tab_ft <- ca %>%
+  group_by(habitat) %>%
+  summarize(effort = sum(actual_effort)) %>%
+  left_join(obs_tab_ft, ., by = "habitat")
+
+obs_tab_ft_std <- sweep(obs_tab_ft[,-1], 1, obs_tab_ft$effort, FUN = "/")
+rownames(obs_tab_ft_std) <- obs_tab_ft$habitat
+
+shan_by_ft <- as.data.frame(diversity(obs_tab_ft_std, index = "shannon"))
+colnames(shan_by_ft)[colnames(shan_by_ft) == 'diversity(obs_tab_ft_std, index = "shannon")'] <- 'shannon'
+shan_by_ft <- rownames_to_column(shan_by_ft, var = "habitat")
+div_tab_ft <- left_join(div_tab_ft, shan_by_ft, by = "habitat")
+rm(shan_by_ft)
+
+#by partition
+shan_by_pt <- as.data.frame(diversity(table(test$partition, test$animal), index = "shannon"))
+colnames(shan_by_pt)[colnames(shan_by_pt) == 'diversity(table(test$partition, test$animal), index = "shannon")'] <- 'shannon'
+shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
+div_tab_pt <- left_join(div_tab_pt, shan_by_pt[-1,], by = "partition")
+rm(shan_by_pt)
+
+
+### Pielou's diversity measure of species evenness
+
+#by forest type
+div_tab_ft$evenness <- div_tab_ft$shannon / log(div_tab_ft$richness)
+
+#by partition
+div_tab_pt$evenness <- div_tab_pt$shannon / log(div_tab_pt$richness)
+
+#ordering forest types and partitions
+div_tab_ft$habitat <- factor(div_tab_ft$habitat, 
+                             levels = c("PS", "FS","AB","LS","LG","UG", "MO"),
+                             ordered = TRUE)
+
+div_tab_pt$partition <- factor(div_tab_pt$partition, 
+                               levels = c("PS.I","FS.I","AB.I","AB.II","LS.I","LS.II",
+                                          "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
+                               ordered = TRUE)
+
+### Diversity metrics visualization 
+
+#species richness by ft
+ggplot(div_tab_ft, aes(habitat, richness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#species richness by pt
+ggplot(div_tab_pt, aes(partition, richness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#species diversity by ft
+ggplot(div_tab_ft, aes(habitat, shannon)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#species diversity by pt
+ggplot(div_tab_pt, aes(partition, shannon)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#species evenness by ft
+ggplot(div_tab_ft, aes(habitat, evenness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#species evenness by pt
+ggplot(div_tab_pt, aes(partition, evenness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
