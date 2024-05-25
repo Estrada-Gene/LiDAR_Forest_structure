@@ -685,53 +685,76 @@ obs_tab_pt$partition <- factor(obs_tab_pt$partition,
                                       "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
                            ordered = TRUE)
 
-### species richness - I should control for effort starting here and move the effort code up to this chunk
+### species richness
 
 #by entire study area
-length(obs_tab_ft[,-1]) #183 unique species observed
+length(obs_tab_ft[,-1]) #180 unique species observed
 
 #by forest type
-div_tab_ft <- obs_tab_ft %>%
-  rowwise() %>%
-  mutate(richness = sum(!is.na(c_across(-1)))) %>%
-  select(habitat = 1, richness) %>%
-  arrange(desc(habitat))
 
-#by partition
-div_tab_pt <- obs_tab_pt %>%
-  rowwise() %>%
-  mutate(richness = sum(!is.na(c_across(-1)))) %>%
-  select(partition = 1, richness) %>%
-  arrange(desc(partition))
+#turning NA to 0
+#obs_tab_ft[is.na(obs_tab_ft)] <- 0
 
-
-### shannon diversity - controlling for effort, but I'm not sure if I need to do this
-
-#by entire study area - not controlling for survey effory
-diversity(colSums(obs_tab_ft[,-1], na.rm = TRUE), index = "shannon")
-
-#by forest type
-obs_tab_ft[is.na(obs_tab_ft)] <- 0
 #adding survey effort
 obs_tab_ft <- ca %>%
   group_by(habitat) %>%
   summarize(effort = sum(actual_effort)) %>%
   left_join(obs_tab_ft, ., by = "habitat")
 
+div_tab_ft <- obs_tab_ft %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(habitat = 1, richness) %>%
+  left_join(., obs_tab_ft[,c("habitat","effort")]) %>%
+  mutate(rich_std = richness/effort) %>%
+  arrange(desc(habitat))
+
+
+#by partition
+#obs_tab_pt[is.na(obs_tab_pt)] <- 0
+
+#adding survey effort
+obs_tab_pt <- ca %>%
+  group_by(partishun) %>%
+  summarize(effort = sum(actual_effort)) %>%
+  left_join(obs_tab_pt, ., join_by("partition" == "partishun"))
+
+div_tab_pt <- obs_tab_pt %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(partition = 1, richness) %>%
+  left_join(., obs_tab_pt[,c("partition","effort")]) %>%
+  mutate(rich_std = richness/effort) %>%
+  arrange(desc(partition))
+
+
+### shannon diversity
+
+#by entire study area - not controlling for survey effory
+diversity(colSums(obs_tab_ft[,-c(1,182)], na.rm = TRUE), index = "shannon")
+
+#by forest type
 obs_tab_ft_std <- sweep(obs_tab_ft[,-1], 1, obs_tab_ft$effort, FUN = "/")
 rownames(obs_tab_ft_std) <- obs_tab_ft$habitat
+obs_tab_ft_std[is.na(obs_tab_ft_std)] <- 0
 
 shan_by_ft <- as.data.frame(diversity(obs_tab_ft_std, index = "shannon"))
 colnames(shan_by_ft)[colnames(shan_by_ft) == 'diversity(obs_tab_ft_std, index = "shannon")'] <- 'shannon'
 shan_by_ft <- rownames_to_column(shan_by_ft, var = "habitat")
+
 div_tab_ft <- left_join(div_tab_ft, shan_by_ft, by = "habitat")
 rm(shan_by_ft)
 
 #by partition
-shan_by_pt <- as.data.frame(diversity(table(test$partition, test$animal), index = "shannon"))
-colnames(shan_by_pt)[colnames(shan_by_pt) == 'diversity(table(test$partition, test$animal), index = "shannon")'] <- 'shannon'
+obs_tab_pt_std <- sweep(obs_tab_pt[,-1], 1, obs_tab_pt$effort, FUN = "/")
+rownames(obs_tab_pt_std) <- obs_tab_pt$partition
+obs_tab_pt_std[is.na(obs_tab_pt_std)] <- 0
+
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std, index = "shannon"))
+colnames(shan_by_pt)[colnames(shan_by_pt) == 'diversity(obs_tab_pt_std, index = "shannon")'] <- 'shannon'
 shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
-div_tab_pt <- left_join(div_tab_pt, shan_by_pt[-1,], by = "partition")
+
+div_tab_pt <- left_join(div_tab_pt, shan_by_pt, by = "partition")
 rm(shan_by_pt)
 
 
@@ -756,13 +779,20 @@ div_tab_pt$partition <- factor(div_tab_pt$partition,
 ### Diversity metrics visualization 
 
 #species richness by ft
+#standardized
+ggplot(div_tab_ft, aes(habitat, rich_std)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic()
+
+#raw counts
 ggplot(div_tab_ft, aes(habitat, richness)) +
   geom_col() +
   coord_flip() +
   theme_classic()
 
 #species richness by pt
-ggplot(div_tab_pt, aes(partition, richness)) +
+ggplot(div_tab_pt, aes(partition, rich_std)) +
   geom_col() +
   coord_flip() +
   theme_classic()
