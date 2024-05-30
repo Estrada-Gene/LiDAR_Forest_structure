@@ -1,0 +1,203 @@
+Orig_singkat,New_Singkat,singkat_prior_2016,Order_latin,Family,Latin_name,Spp_common_name,Indonesia_name,Mark_comment_3_06,class,notes
+NULL,KD,NULL,ANURA,NULL,NULL,Unid Frog (Camera Trap),Katak/kodok tidak tahu,,Amphibi,Added 2016
+NULL,EA,NULL,FALCO,ACCIP,Accipiter trivirgata,Crested goshawk,Elang Alap Jambul,,Bird,Added 2019 (Camera Trap)
+NULL,EL,NULL,NULL,ACCIP,NULL,Eagles,Elang,NULL,Bird,NULL
+NULL,EG,NULL,NULL,ACCIP,Spilornis sp.,Crested Serpent-Eagle,Elang ular bido,,Bird,Added 2017 (Camera Trap)
+NULL,KR,NULL,,ACROC,Acrocephalus sp.,Reed-Warbler,Kerakbasi,NULL,Bird,Added 2016 (Camera Trap)
+NULL,CC,NULL,CORAC,ALCED,Halcyon pileata,Black-capped Kingfisher,Cekakak Cina,NULL,Bird,NULL
+NULL,RUX,RU,CORAC,ALCED,NULL,Kingfishers,Raja udang,NULL,Bird,NULL
+NULL,IX,NULL,PELEC,ARDEI,Ixobrychus spp,Bitterns/heron,Bambangan,,Bird,Added 2018 (Camera trap)
+wc,WC,NULL,BUCER,BUCER,Aceros comatus,white creste3d hornbill,NULL,white crowned hornbill,Bird,NULL
+wk,WK,NULL,BUCER,BUCER,Aceros corrugatus,Wrinkled Hornbill,NULL,wrinkled hornbill,Bird,NULL
+wd,WD,NULL,BUCER,BUCER,Aceros undulatus,wreathed hornbill,NULL,wreathed hornbill,Bird,NULL
+bc,BC,NULL,BUCER,BUCER,Anorhinus galeritus,Bushy-crested Hornbill,burung mati sekawan,bushy crested,Bird,NULL
+bl,BL,NULL,BUCER,BUCER,Anthracoceros malayanus,Black Hornbill,NULL,black hornbill,Bird,NULL
+NULL,EJ,NULL,BUCER,BUCER,Berenicornis comatus,White-crowned Hornbill,Enggang Jambul,NULL,Bird,Added 2020 (Camera Trap)
+rh,RH,NULL,BUCER,BUCER,Buceros rhinoceros,Rhinoceros Hornbill,Enggang gading,rhino hornbill,Bird,NULL
+"hb, ho",HB,NULL,BUCER,BUCER,,Unid hornbill,Enggang tak tahu nama,unid hornbill,Bird,NULL
+he,HE,NULL,BUCER,BUCER,,Helmeted Hornbill,Enggang Raja,helmeted,Bird,NULL
+NULL,SS,NULL,CICON,CICON,Ciconia stormi,Storm's Stork,Bango Storm,NULL,Bird,Added 2017 (Camera Trap)
+ed,ED,NULL,COLUM,COLUM,Chalcophaps indica,Emerald Dove,Tekukur,migratory bird---ck G&sp match with parakeet or  pigeon,Bird,NULL
+pi,PI,NULL,COLUM,COLUM,Ducula spp.,Imperial Pigeon,Peregam,unid pigeon? Pigeon imperial?,Bird,NULL
+NULL,SN,NULL,NULL,COLUM,NULL,Parots,Selindit,NULL,Bird,NULL
+jf,JF,NULL,COLUM,COLUM,Ptilinopus jambu,Jambu Fruit Dove,Punai hijau kepala merah,jambu fruit pigeon,Bird,NULL
+tc,TC,NULL,COLUM,COLUM,Treron capellei,Little Green Pigeon,Punai hijau,Treron fruit pigeon,Bird,NULL
+"pt, tr,tx",PT,NULL,COLUM,COLUM,Treron spp.,Unid green pigeon,Punai hujau belum tahu nama,Ptillinopus jambu?,Bird,NULL
+,CX,NULL,COLUM,COLUM,,Unid Pigeon,Peregam belum ada nama,,Bird,NULL
+gr,GR,NULL,PASSE,CORVI,Aegithina viridissima,Green Iora,NULL,,Bird,NULL
+,MG,NULL,PASSE,CORVI,Cissa spp.,Unid magpie,Gagak ekor panjang,,Bird,NULL
+,CE,NULL,PASSE,CORVI,Corvus enca,Slender-billed Crow,Gagak,,Bird,NULL
+NULL,GM,NULL,PASSE,CORVI,Pityriasis gymnocephala,Bornean bristlehead,Gagak kepala merah,NULL,Bird,NULL
+NULL,TO,NULL,PASSE,CORVI,Platylophus galericulatus,Crested Jay,Tangkar Ongklet,NULL,Bird,Added 2016
+NULL,BGC,NULL,CUCUL,CUCUL,Carpococcyx radiceus,Bornean Ground-Cuckoo,Bubut Dundun,NULL,Bird,NULL
+NULL,LC,NULL,CUCUL,CUCUL,Centropus rectunguis,Short-toed coucal,Bubut hutan,NULL,Bird,Added 2020 (Camera Trap)
+NULL,PH,NULL,CUCUL,CUCUL,Phaenicophaeus,Malkohas,Kelakuk,NULL,Bird,NULL
+NULL,DGG,NULL,PASSE,DICRU,Dicrurus annectans,Crow-billed Drongo,Srigunting gagak,NULL,Bird,NULL
+NULL,PLT,NULL,PASSE,DICRU,Dicrurus remifer,Lesser Racket-Tailed Drongo,Srigunting bukit,NULL,Bird,Added 2016
+NULL,DGX,DG,NULL,DICRU,Dicrurus sp,Drongos,Pelampung tiang,NULL,Bird,NULL
+gb,GB,NULL,PASSE,EURYL,Calyptomena viridis,Green Broadbill,NULL,green broadbill,Bird,NULL
+NULL,RB,NULL,PASSE,EURYL,Eurylaimus sp,Reddish broadbills,NULL,NULL,Bird,NULL
+br,BR,NULL,PASSE,EURYL,,Unid Broadbill,NULL,,Bird,NULL
+ggl,GG,NULL,PASSE,IRENI,Chloropsis sonnerati,Greater Green Leafbird,NULL,have to look up in notebook,Bird,NULL
+lb,LB,NULL,PASSE,IRENI,Chloropsis spp.,Leafbird lesser or greater,Buring kecil hijau leher hitam,leaf bird (lesser of greater?),Bird,NULL
+fb,FB,NULL,PASSE,IRENI,Irena puella,Fairy Bluebird,Burung biru tua,fairy bluebird,Bird,NULL
+,BF,NULL,PICIF,MEGAL,Calorhamphus fuliginosus,Brown Barbet,Pipit coklat,,Bird,NULL
+ma,MA,NULL,PICIF,MEGAL,Megalaima australis,Little Barbet,Pipit kecil,these m's are mystacophanesÃausgtralis,Bird,NULL
+mc,MC,NULL,PICIF,MEGAL,Megalaima chrysopogon,Gold-wiskered Barbet,Pipit mas,m. chryso,Bird,NULL
+mh,MH,NULL,PICIF,MEGAL,Megalaima henricii,Yellow-crowned Barbet,Pipit kepala kuning,m henricii,Bird,NULL
+mm,MM,NULL,PICIF,MEGAL,Megalaima mystacophanes,Gaudy Barbet,Pipit warna-warni,m mystacophanes,Bird,NULL
+mp,MP,NULL,PICIF,MEGAL,Megalaima pulcherrima,Golden-naped Barbet,Pipit leher mas,who the hell?,Bird,NULL
+mr,MR,NULL,PICIF,MEGAL,Megalaima rafflesii,Red-crowned Barbet,Pipit kepala merah,ck match green barbet spp?,Bird,NULL
+mx,MX,NULL,PICIF,MEGAL,,Unid gn barbet,Pipit tak tahu nama,unknown gn barbet,Bird,NULL
+NULL,ML,NULL,CORAC,MEROP,Nyctyornis amictus,Red-bearded bee-eater,Pemakan lebah berewok merah,NULL,Bird,NULL
+NULL,CKX,CK,PASSE,MONAR,NULL,Paradise-Flycatchers and Monarch sp.,"Kipasan, Kehicap, Philentoma dan Seriwang",,Bird,NULL
+NULL,MT,NULL,PASSE,MUSCI,Enicurus leschenaulti,White-Crowned Forktail,Meninting besar,NULL,Bird,Added 2016 (Camera Trap)
+NULL,SBR,NULL,PASSE,MUSCI,Larvivora cyanea,Siberian Blue Robin,Berkecet Siberia,NULL,Bird,Added 2020 (Camera Trap)
+NULL,DB,NULL,PASSE,MUSCI,Saxicola torquata,Stonechat sp.,Decu Batu,NULL,Bird,NULL
+NULL,KCC,NULL,PASSE,MUSCI,Trichixos pyrropyga,Rufous-Tailed Shama,Kucica ekor kuning,NULL,Bird,Added 2016 (Camera Trap)
+fp,FP,NULL,PASSE,NECTA,Dicaeum spp.,Flowerpecker,Semadu biasa,?,Bird,NULL
+yb,YB,NULL,PASSE,NECTA,Prionochilus maculatus,Yellow-breasted Flowerpecker Prionochilus maculatus,Semadu dada kuning,,Bird,NULL
+NULL,LBJ,NULL,NULL,NULL,NULL,"""Little brown job"".  Small unknown birds.",NULL,NULL,Bird,NULL
+NULL,MPH,NULL,NULL,NULL,NULL,Black/white forktail,Murai hitam putih,NULL,Bird,NULL
+NULL,PN,NULL,NULL,NULL,NULL,NULL,Perling,Red eyes,Bird,NULL
+NULL,PPK,NULL,NULL,NULL,NULL,??,Burung pan-pan kut,NULL,Bird,NULL
+NULL,RP,NULL,NULL,NULL,NULL,Raptors,NULL,NULL,Bird,NULL
+NULL,UBX,UB,NULL,NULL,NULL,Unnamed bird,Burung tampa singkat,NULL,Bird,NULL
+NULL,CKP,NULL,NULL,NULL,Tersiphone paradisi,Asian paradise flycatcher,Cabet kapan/Seriwang Asia,NULL,Bird,NULL
+NULL,PYH,NULL,GALLI,PASSI,Melanoperdix nigra,Black Partridge,Puyuh hitam,NULL,Bird,Added 2016 (Cam trap)
+NULL,RW,NULL,GALLI,PHASI,Argusianus argus,Argus pheasant,Ruwai,NULL,Bird,NULL
+NULL,AHB,NULL,GALLI,PHASI,Lophura ignita,Crested Fireback,Ayam hutan/Sempidan biru,,Bird,NULL
+cf,AHX,CF,GALLI,PHASI,Lophura spp,Unid Forest Chicken,Ayam hutan tidak tahu,,Bird,NULL
+wp,WP,NULL,GALLI,PHASI,Rollulus rouloul,green wood partridge,Senayan,green wood partridge,Bird,NULL
+NULL,PKM,NULL,PICIF,PICID,Blythipicus rubiginosus,Maroon woodpecker,Pelatuk merah,NULL,Bird,NULL
+NULL,PBS,NULL,PICIF,PICID,Dinopium javanese,Common Flameback Woodpecker,Pelatuk besi,NULL,Bird,Added 2016
+NULL,DJ,NULL,NULL,PICID,Dryocopus javensis,White-bellied woodpecker,Pelatuk hitam besar,NULL,Bird,NULL
+NULL,GS,NULL,NULL,PICID,Mulleripicus pulverulentus,Great slatey woodpecker,Pelatuk abu2 besar,NULL,Bird,NULL
+NULL,PJK,NULL,PICIF,PICID,Picus flavinucha,Greater yellownape,Pelatuk kuduk-kuning,NULL,Bird,Added 2016
+NULL,PPX,PP,PICIF,PICID,Picus sp,Picus sp,Pelatuk hijau sayap merah,NULL,Bird,NULL
+NULL,PO,NULL,PICIF,PICID,Reinwardtipicus validus,Orange-bllied woodpecker,Pelatuk sayap hitam belakang putih/merah,NULL,Bird,NULL
+NULL,PKX,PK,PICIF,PICID,,Unid woodpecker,Pelatuk tIdak tahu,NULL,Bird,NULL
+NULL,TTB,NULL,PASSE,PITTI,Pitta baudi,Blue-headed pitta,Pikung kepala biru,,Bird,Added 2016 (Camera Trap)
+NULL,TTG,,PASSE,PITTI,Pitta granatina,Granet pitta,Pikung kepala merah,,Bird,Added 2016 (Camera trap)
+NULL,TTK,NULL,PASSE,PITTI,Pitta nympha,Fairy pitta,"Pikung kepala kuning, mata garis putih","Crown to nape black, narrow buff supercilium, side of head b",Bird,Added 2016 (Camera trap)
+NULL,TT,NULL,PASSE,PITTI,Pitta sp,All pittas,Pikung,NULL,Bird,NULL
+pl,PL,NULL,PSITT,PSITT,Psittacula longicauda,Long-tailed Parakeet,Betep,Psittacula longicauda,Bird,NULL
+NULL,MK,,PASSE,PYCNO,Alophoixus phaeocephalus,Yellow-bellied bulbul,Merbak perut kuning,"Grey-headed, yellow-bellied, brown-tailed",Bird,Added 2016 (Camera trap)
+,PA,NULL,PASSE,PYCNO,Pycnonotus atriceps,Black-headed Bulbul ,Merabak kepala hitam,,Bird,NULL
+bb,BB,NULL,PASSE,PYCNO,Pycnonotus brunneus,Brown Bulbul,Merabak coklat,brown bulbul,Bird,NULL
+pb,PB,NULL,PASSE,PYCNO,Pycnonotus brunneus,Red-eyed Bulbul,Merabak mata merah,,Bird,NULL
+"pg, gbbu",PG,NULL,PASSE,PYCNO,Pycnonotus cyaniventris,Grey-bellied Bulbul,Merabak abu2 di depan,? Some frug bird-ck match,Bird,NULL
+cb,CB,NULL,PASSE,PYCNO,Pycnonotus melanicterus,Black-crested Bulbul ,Merabak topi hitam,,Bird,NULL
+bw,BW,NULL,PASSE,PYCNO,Pycnonotus melanoleucos,Black-and-white Bulbul ,Merabak hitam putih,,Bird,NULL
+px,PX,NULL,PASSE,PYCNO,Pycnonotus spp.,Unid bulbul,Merabak tak tahu nama,bulbul-Pycnonotus spp.,Bird,NULL
+,BS,NULL,PASSE,PYCNO,Setornis criniger,Hook-billed Bulbul,Merabak paruh bengkok,,Bird,NULL
+,BH,NULL,PASSE,PYCNO,Tricholestes criniger,Hairy-backed Bulbul,Merabak biasa,,Bird,NULL
+b+w bulbul,PM,NULL,PASSE,PYCNO,,Brown & White Bulbul,Merbaka coklat putih,,Bird,NULL
+NULL,CKH,NULL,PASSE,RHIPI,Rhipidura javanica,Pied Fantail,Kipasan Belang Ekor Pendek,NULL,Bird,NULL
+NULL,KTP,NULL,STRIG,STRIG,Ketupa ketupu,Buffy fish owl,Beluk ketupa,NULL,Bird,Added 2018
+NULL,BU,NULL,NULL,STRIG,NULL,Owls,Burung hantu/Buak,NULL,Bird,NULL
+my,MY,NULL,PASSE,STURN,Gracula religiosa,Hill Myna,Beo (Teo),myna bird,Bird,NULL
+NULL,SWB,,PASSE,TIMAL,Kenopia striata,Striped wren-babblers,,"Almoost similar with BCB, different body color patterns",Bird,Added 2016 (Camera trap)
+NULL,BAB,,,TIMAL,Malacocincla sp.,Short-tailed Babbler,Pelanduk ekor pendek,,Bird,Added 2016 (Cam Trap)
+NULL,JB,NULL,NULL,TIMAL,NULL,Jungle babblers,Ciriak,NULL,Bird,NULL
+NULL,BCB,NULL,NULL,TIMAL,Pellorneum capistratum,Black-capped babbler,Babbler kepala hitam garis putih,Terrestrial babbler,Bird,Added 2016 (Camera trap)
+NULL,TMX,NULL,NULL,TIMAL,Timaliidae,Unid Babblers,Burung Pelanduk,NULL,Bird,Added 2016 (Camera Trap)
+tr,TR,NULL,TROGO,TROGO,Harpactes spp.,Unid Trogon,NULL,,Bird,NULL
+NULL,MB,NULL,PASSE,TURDI,Copsychus malabaricus,White-rumped shama,Murai batu,NULL,Bird,NULL
+NULL,DD,NULL,CARNI,CANID,Canis familiaris,Domestic dog,Anjing Kampung,NULL,Mammal,Added 2021 (Camera trap)
+fk,FK,NULL,PRIMA,CERCO,Macaca fascicularis,kera,Kera biasa,kera,Mammal,NULL
+bk,BK,NULL,PRIMA,CERCO,Macaca nemestrina,Pig-tailed macaque (Berok),Berok,berok,Mammal,NULL
+lu,LU,NULL,PRIMA,CERCO,Presbytis frontata,Silvered Langur,Luntung,,Mammal,NULL
+kl,KL,NULL,PRIMA,CERCO,Presbytis rubicunda rubida,Red Leaf Monkey,Kelasi,"not sure, the red guy",Mammal,NULL
+,SD,NULL,ARTIO,CERVI,Cervus unicolor,Sambar Deer,Rusa,,Mammal,NULL
+NULL,BDM,NULL,ARTIO,CERVI,Muntiacus atherodes,Red Muntjac,Kijang Merah,,Mammal,Added 2017 (Camera Trap)
+bd,BD,NULL,ARTIO,CERVI,Muntiacus muntjak,Bornean Yellow Muntjac,Kijang Kuning,,Mammal,NULL
+NULL,BDX,NULL,ARTIO,CERVI,Muntiacus spp.,Unid Barking Deer,Kijang Tidak Tahu,NULL,Mammal,Added 2017 (Camera Trap)
+NULL,ER,NULL,NULL,ERINA,Echinosorex gymnurus,Moonrat,Tikus Bulan,NULL,Mammal,Added 2017 (Camera trap)
+NULL,KBT,NULL,CARNI,FELID,Catopuma badia,Bay cat,Kucing badia,NULL,Mammal,Added 2016 (Camera trap)
+,FC,NULL,CARNI,FELID,Felis planiceps,Flat-headed Cat,NULL,,Mammal,NULL
+NULL,MD,NULL,CARNI,FELID,Neofelis nebulosa,Sunda Clouded Leopard,Macan Dahan,NULL,Mammal,Added 2016
+NULL,HD,,CARNI,FELID,Pardofelis marmorata,Marble Cat,Harimau/Kucing Dahan,,Mammal,Added 2016 (Cam Trap)
+NULL,KBL,KH,CARNI,FELID,Prionailurus bengalensis,Leopard cat,Kucing Loreng,,Mammal,NULL
+NULL,MN,NULL,CARNI,HERPE,Herpestes sp.,Mongoose,,,Mammal,NULL
+gn,GN,NULL,PRIMA,HYLOB,Hylobates albibarbis,Bornean white-bearded gibbon,Kelompiao,gibbon,Mammal,NULL
+la,LA,NULL,RODEN,HYSRT,Hystrix brachyura,Common Procupine (Landak),Landak,,Mammal,NULL
+NULL,LI,NULL,RODEN,HYSTR,Trichys fasciculata,Long-Tailed Porcupine,Landak ekor panjang,NULL,Mammal,Added 2016
+NULL,TL,NULL,PHOLI,MANID,Manis javanica,Pangolin,Tingaling,NULL,Mammal,Added 2016
+NULL,TKM,,RODEN,MURID,Unid Night Rat,Unid Night Rat (camera trap),Tikus Malam tidak tahu (Kamera trap),,Mammal,Added 2016 (Cam trap)
+NULL,OT,NULL,CARNI,MUSTE,Aonyx cinerea,Oriental small-clawed otter,Berang-berang,NULL,Mammal,NULL
+NULL,MW,NULL,CARNI,MUSTE,Mustela nudipes,Malay weasel,,Body bright orange,Mammal,Added 2016 (Camera trap)
+NULL,HA,NULL,NULL,NULL,Homo sapiens,Hunters,Pemburu,NULL,Mammal,Added 2016
+NULL,OA,NULL,NULL,NULL,Homo sapiens,Unid Person,Orang asing,NULL,Mammal,Added 2016
+NULL,OCP,NULL,NULL,NULL,Homo sapiens,Person from Camp,Orang Cabang Panti,NULL,Mammal,Added 2016
+NULL,SC,NULL,NULL,NULL,Homo sapiens,Person servicing camera,Orang kerja kamera trap,NULL,Mammal,Added 2016
+NULL,KB,NULL,RODEN,NULL,Unid flying squirrel,Flying squirrel,Kubong,NULL,Mammal,NULL
+NULL,KW,NULL,NULL,NULL,Unid bat,Small bats,Kelelawar kecil,NULL,Mammal,NULL
+NULL,TK,NULL,NULL,NULL,Unid rodent,Mouse or Rat sp.,Tikus tak tahu nama,NULL,Mammal,Added 2016
+NULL,TX,NULL,NULL,NULL,,Confuse between Squirrel or Treeshrew,Tidak tahu bajing atau tupai,NULL,Mammal,Added 2017 (Camera Trap)
+oh,OH,NULL,PRIMA,PONGI,Pongo pygmaeus,Orangutan,Orangutan,big fat fuck,Mammal,NULL
+NULL,LS,NULL,CARNI,PRION,Prionodon linsang,Banded Linsang,Linsang,NULL,Mammal,Added 2016
+df,DF,NULL,CHIRO,PTERO,Pteropus spp.,Dogfaced bat,Kelelawar besar,dogfaced bat,Mammal,NULL
+cn,CN,NULL,RODEN,SCIUR,Callosciurus nonatus,Plantain Squirrel,Bajing,Callosciurus nonatus,Mammal,NULL
+cp,CP,NULL,RODEN,SCIUR,Callosciurus prevostii,Prevost's Squirrel,Bajing belang,"   "" prevostii",Mammal,NULL
+NULL,DE,NULL,RODEN,SCIUR,Dremomys everetti,Bornean mountain ground squirrel,"Bajing gunung, sedang, coklat polos, biasa di PK",NULL,Mammal,NULL
+NULL,SQG,NULL,RODEN,SCIUR,Lariscus hosei,Four-striped Ground Squirrel,Bajing garis empat,NULL,Mammal,Added 2016
+NULL,SQT,NULL,RODEN,SCIUR,Lariscus insignis,Three-striped Ground Squirrel,Bajing garis tiga,NULL,Mammal,Added 2016
+ra,RA,NULL,RODEN,SCIUR,Ratufa affinis,Giant Squirrel,Bajing besar ekor panjang,ratufa,Mammal,NULL
+tg,TG,NULL,RODEN,SCIUR,Rheithrosciurus macrotis,Tufted Ground Squirrel,Bajing ekor panjang telingga panjang,tufted eared ground squirrel,Mammal,NULL
+NULL,BT,,RODEN,SCIUR,Rhinosciurus laticaudatus,Shrew-faced ground squirrel,Bajing tanah muka tupai,"short, bushy and stripe tail, long nose, no side stripe,",Mammal,Added 2016
+"ht, sh",HT,NULL,RODEN,SCIUR,Sundasciurus hippurus,Horsetailed Squirrel,Bajing ekor kuda,horsetailed squirrel,Mammal,NULL
+NULL,SJ,,RODEN,SCIUR,Sundasciurus jentinki,Jentink's Squirrel,Tupai Jentink,NULL,Mammal,Added 2017 (Camera Trap)
+sl,SL,NULL,RODEN,SCIUR,Sundasciurus lowii,Low's Squirrel,Bajing,Sundasciurus lowii,Mammal,NULL
+,PS,NULL,RODEN,SCIUR,Unid pygmy squirrel,Unid pygmy squirrel,Kelinsat,,Mammal,NULL
+sq,SQX,SQ,RODEN,SCIUR,Unid squirrel,Unid squirrel,Bajing tidak tahu,unid squirrel,Mammal,NULL
+bp,BP,NULL,ARTIO,SUIDA,Sus barbatus,Bearded Pig,Babi hutan,bearded pig,Mammal,NULL
+NULL,TS,NULL,PRIMA,TARSI,Tarsius bancanus,Western Tarsier,NULL,NULL,Mammal,NULL
+NULL,KCL,NULL,ARTIO,TRAGU,Tragulus javanicus,Lesser Mouse Deer,Kancil,NULL,Mammal,Added 2016
+NULL,KAB,NULL,ARTIO,TRAGU,Tragulus napu,Greater Mouse Deer,Napu (kancil yang lebih besar),NULL,Mammal,Added 2016
+ka,KAX,KA,ARTIO,TRAGU,Tragulus spp.,Unid Mouse Deer,Kancil tidak tahu,kancil,Mammal,NULL
+NULL,TPH,NULL,SCAND,TUPAI,Tupaia dorsalis,Striped treeshrew,Tupai punggung hitam,Black stripe on dorsal,Mammal,Added 2016 (Camera trap)
+NULL,TPK,NULL,SCAND,TUPAI,Tupaia gracilis,Slender Treeshrew,Tupai kecil,"Different with T. minor, often seen on the ground",Mammal,Added 2017 (Camera Trap)
+NULL,TPL,,SCAND,TUPAI,Tupaia longipes (glis),Plain (Common) treeshrews,Tupai tanah datar,"Almost similar with T.tana. Different rhinarium, size, claw",Mammal,Added 2016 (Camera trap)
+NULL,TPG,NULL,SCAND,TUPAI,Tupaia montana,Mountain treeshrew,Tupai gunung,"Long, thin and less bushy tail. Long nose with pale stripe o",Mammal,Added 2016 (Camera Trap)
+NULL,TPP,,SCAND,TUPAI,Tupaia sp.,Unid Pale shoulder stripe Treeshrews,Tupai garis putih tidak tahu,NULL,Mammal,Added 2016 (Cam trap)
+NULL,TPM,,SCAND,TUPAI,Tupaia splendidula,Splendid treeshrews,Tupai ekor merah,NULL,Mammal,Added 2016 (Cam trap)
+NULL,TPT,NULL,SCAND,TUPAI,Tupaia tana,Large ground treeshreew,Tupai tanah besar,"Pale stripe on shoulder, long nose",Mammal,Added 2016 (Camera trap)
+sb,SB,NULL,CARNI,URSID,Helarctos malayanus,Sun Bear,Beruang,sun bear,Mammal,NULL
+bi,BI,NULL,CARNI,VIVER,Arctictis binturong,Binturong,Binturong,binturong,Mammal,NULL
+sc,ST,NULL,CARNI,VIVER,Arctogalidia trivirgata,Small-toothed Palm Civet,Musang,small clawed civet?,Mammal,NULL
+NULL,MBB,,CARNI,VIVER,Cynogale bennettii,Otter-civet,Musang berang-berang,,Mammal,Added 2016 (Cam trap)
+NULL,LSM,NULL,CARNI,VIVER,Hemigalus derbyanus,Banded Palm Civet,Linsang merah,NULL,Mammal,Added 2016
+NULL,LSH,NULL,CARNI,VIVER,Hemigalus hosei,Hose's Civet,Musang Hose,NULL,Mammal,Added 2017 (Camera Trap)
+NULL,MLK,NULL,CARNI,VIVER,Paguma larvata,Masked Palm Civet,Musang luak kopi,NULL,Mammal,Added 2016
+pc,PC,NULL,CARNI,VIVER,Paradoxurus hermaphroditus,Common Palm Civet,Musang biasa,,Mammal,NULL
+ta,TA,NULL,CARNI,VIVER,Viverra tangalunga,Malay Civet (Tanggalong),Tanggalong,,Mammal,NULL
+ci,CIX,CI,CARNI,VIVER,Unid Civet,Unid Civet,NULL,unid civet,Mammal,NULL
+pr,PR,NULL,PRIMA,,,Unid primate,Primata tidak tahu,Ptillinopus jambu?,Mammal,NULL
+NULL,LZB,NULL,SQUAM,AGAMI,Agamidae,Agamid lizard,Bunglon,,Reptile,Added 2016 (Camera trap)
+NULL,UPG,NULL,SQUAM,COLUB,Dendrelaphis caudolineatus,Striped Bronzeback Tree Snake,Ular pohon dengan garis,NULL,Reptile,Added 2016
+NULL,UGA,NULL,SQUAM,COLUB,Oreocalamus hanitschi,Mountain Reed Snake,Ular gunung alang-alang,NULL,Reptile,Added 2016
+NULL,UHB,NULL,SQUAM,COLUB,Stegonotus borneensis,Bornean Black Snake,Ular Borneo yg hitem,NULL,Reptile,Added 2016
+NULL,UKG,NULL,SQUAM,ELAPI,Bungarus fasciatus,Banded Krait,"Ular Garis, kuning dan hitam",NULL,Reptile,Added 2016
+NULL,UMH,NULL,SQUAM,ELAPI,Bungarus flavicepts,Red-Headed Krait,Ular stengah merah stengah hitam,NULL,Reptile,Added 2016
+NULL,UKM,NULL,SQUAM,ELAPI,Calliophis bivirgata,Blue Coral Snake,Ular biru dengan kepala merah,NULL,Reptile,Added 2016
+sn,ULX,UL,NULL,NULL,NULL,Snake,Ular,"Original sinkat SN, Ali said he was still using for snake.",Reptile,NULL
+NULL,UPP,NULL,SQUAM,PYTHO,Python breitensteini,Bornean Short-tailed Python,Python Pendek,NULL,Reptile,Added 2016
+NULL,UPR,NULL,SQUAM,PYTHO,Python reticulatus,Reticulated Python,Python Bentuk,NULL,Reptile,Added 2016
+NULL,LZX,,SQUAM,SCINC,Scincidae,Unid Lizard,Kadal Belum Tahu,,Reptile,Added 2016 (Cam Trap)
+NULL,BA,NULL,NULL,VARAN,,Monitor lizard,Biawak,NULL,Reptile,NULL
+NULL,UVB,NULL,SQUAM,VIPER,Parias sumatranus,Sumatran Pit Viper,Ular Viper hijau dan dengan bentuk,NULL,Reptile,Added 2016
+NULL,UVS,NULL,SQUAM,VIPER,Popeia sabahi,Sabah Pit Viper,Ular Viper hijau dan lebih kecil,NULL,Reptile,Added 2016
+NULL,UVW,NULL,SQUAM,VIPER,Tropidolaemus wagleri,Wagler's Pit Viper,Ular Viper Garis,NULL,Reptile,Added 2016
+NULL,YT,NULL,CARNI,MUSTE,Martes flavigula,Yellow-Throated Marten,Musang leher kuning,NULL,,Added 2016
+NULL,KK,NULL,NULL,NULL,NULL,Turtle,Kura-kura,NULL,,NULL
+NULL,RN,NULL,NULL,NULL,NULL,NULL,kelelawar,NULL,,NULL
+NULL,UM,NULL,NULL,NULL,NULL,unid terrestrial mammal,NULL,NULL,,NULL
+NULL,YY,NULL,NULL,NULL,NULL,No animal present,Tidak ada binatang,NULL,,Added 2016
+NULL,ZZ,NULL,NULL,NULL,NULL,Camera Trap Field Scan,Video periksa kamera masih baik,NULL,,Added 2016
+NULL,TB,NULL,NULL,NULL,,Heard Gunshot(s),Suara Tembakan,NULL,,Added 2016
+NULL,AHM,NULL,GALLI,PHASI,Lophura erythrophthalma,Crestless Fireback,Ayam hutan/Sempidan merah,NULL,Bird,NULL
+NULL,SR,NULL,INSEC,SORIC,Unid shrew,Shrews,Curut,NULL,Mammal,Added 2017 (Camera Trap)
+NULL,XX,NULL,NULL,,NULL,Don't know animal name,Belum tahu binatang apa,NULL,,Added 2016
+NULL,BM,NULL,,,,Evidence of Logging,Bukti Menebang Pohon,NULL,,NULL
+NULL,BO,NULL,,,,Other indirect evidence of humans (i.e. camp or fires),Bukti lain dari orang (contoh kebakaran atau kamp),NULL,,NULL
