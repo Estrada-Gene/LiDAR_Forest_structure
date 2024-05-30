@@ -574,7 +574,7 @@ tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transfo
 
 ############################################################################################################
 
-## Census data
+## Census (line transect) data 
 
 #importing census summary data - creating diversity metrics to compare to the CT observations
 
@@ -628,7 +628,7 @@ table(p$partition)
 
 #subsetting only segment, hab, and part columns
 p <- p[,2:5]
-unique_values <- unique(as.data.frame(c(p$pointfrom, p$pointto)))
+#unique_values <- unique(as.data.frame(c(p$pointfrom, p$pointto)))
 
 #creating list of trail names in main study area
 trails <- separate(p, pointfrom, into = c("trail","num"), sep = "-", remove = FALSE) %>%
@@ -636,9 +636,8 @@ trails <- separate(p, pointfrom, into = c("trail","num"), sep = "-", remove = FA
   unique() %>%
   pull(trail)
 
-#adding two trails manually - might also want to add SA
+#adding two trails manually - not positive if all of AG and BR are freshwater swamp though
 trails <- c(trails, "AG", "BR")
-
 table(c$trail %in% trails)
 
 #formatting the trail and trailmarker columns to match those in the partitions table
@@ -646,28 +645,74 @@ c$marker <- as.integer(c$trailmark)
 c$marker <- formatC(c$marker, width = 3, format = "d", flag = "0")
 c$pointfrom <-  paste(c$trail, c$marker, sep = "-")
 
+
+#adding 1 to trail marker list
+#splitting pointfrom column into trail and marker columns first
+p <- p[,-2] %>%
+  mutate(trail_name = substr(pointfrom, 1, 2),
+         trail_number = as.numeric(substr(pointfrom, 4, 6)))
+
+# Find the maximum trail number for each trail and create a new row with the incremented number
+new_rows <- p %>%
+  group_by(trail_name) %>%
+  summarise(trail_number = max(trail_number) + 1,
+            habitat = last(habitat),
+            partition = last(partition)) %>%
+  mutate(pointfrom = paste0(trail_name, "-", sprintf("%03d", trail_number)))
+
+# Combine the new rows with the original data frame
+p <- p %>%
+  select(pointfrom, habitat, partition) %>%
+  bind_rows(new_rows %>%
+              select(pointfrom, habitat, partition)) %>%
+  arrange(pointfrom)
+
+rm(new_rows)
+
 #joining and filtering for trails only in the study area
-test <- left_join(c, p, by = "pointfrom")
+c <- left_join(c, p, by = "pointfrom")
 
-#all of the non-matching trails are rangkong trails except AG and BR, maybe SA and others too, though
-#maybe I should add those two to the trail list above before filtering
+#all of the non-matching trails are rangkong trails except AG and BR
 #I might also think about imputing the forest type and partitions where the trail markers are NULL
-table(test$trail[!test$trail %in% trails]) #some trails are listed as NULL
-test <- test[test$trail %in% trails,]
+table(c$trail[!c$trail %in% trails]) #some trails are listed as NULL
 
-#there are still NA's 
-table(is.na(test$habitat))
-table(is.na(test$partition))
+#filtering out rangkong observations
+c <- c[c$trail %in% trails,]
 
-table(test$trail[is.na(test$habitat) == TRUE])
+#adding forest type and partition data for AG and BR
+c$habitat[c$trail == "AG" | c$trail == "BR"] <- "FS"
+c$partition[c$trail == "AG" | c$trail == "BR"] <- "FS.I"
+
+#there are still 31 NA's - might need to look closer at these to fill them out
+table(is.na(c$habitat))
+table(c$trail[is.na(c$habitat)])
+c[is.na(c$habitat),]
+
+##################################################################################################
+#adding species info from singkat file
+singkat <- read.csv(file = "data/vert_singkat-2021-04-08.csv", header = TRUE)
+c <- left_join(c, singkat[,c("New_Singkat","Latin_name","class")], join_by("animal" == "New_Singkat"))
+
+#only include mammals - excluding humans
+#NULL or empty values in 'Latin_name': PR = Unid primate, TX = 'confused squirrel or treeshrew'
+c <- c[which(c$class == "Mammal" & !c$Latin_name %in% c("Homo sapiens","","NULL")),]
+
+#40 mammal species in the data set (maybe less, not sure if I should ignore "Tragulus spp")
+length(unique(c$Latin_name))
+
+#how many observations of each species?
+as.data.frame(table(c$Latin_name)) %>%
+  arrange(desc(Freq))
+
+#add arboreal/terrestrial data from PanTheria
 
 
 #grouping observations by forest type and partition across study period
 #can't do this by census tract since many cover multiple forest types, might not make sense for my analyses
-obs_tab_ft <- test %>% 
-  group_by(habitat, animal) %>%
+obs_tab_ft <- c %>% 
+  group_by(habitat, Latin_name) %>%
   summarise(n = sum(as.numeric(n_indiv))) %>%
-  pivot_wider(names_from = 'animal', values_from = 'n') %>%
+  pivot_wider(names_from = Latin_name, values_from = 'n') %>%
   filter(habitat != "", !is.na(habitat))  #removing the rows associated with no hab designation 
 
 obs_tab_ft$habitat <- factor(obs_tab_ft$habitat, 
