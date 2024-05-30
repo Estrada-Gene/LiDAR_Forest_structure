@@ -704,8 +704,43 @@ length(unique(c$Latin_name))
 as.data.frame(table(c$Latin_name)) %>%
   arrange(desc(Freq))
 
+##########################################################################################################
 #add arboreal/terrestrial data from PanTheria
 
+#loading pantheria dataset (Jones et al. 2009)
+#ref: https://esajournals.onlinelibrary.wiley.com/doi/10.1890/08-1494.1
+library(traitdata)
+data(pantheria)
+terrest <- pantheria[c("Family", "Genus", "scientificNameStd","Terrestriality")]
+
+#most species have same latin name between census and pantheria data, 12 don't
+table(unique(c$Latin_name) %in% terrest$scientificNameStd)
+
+
+#reading in existing trait data from Leech lab paper - species are from ct observations
+traits <- read.csv(file = "data/mammal_list_ct_trait_202403.csv", header = TRUE)
+traits$Terrestriality <- as.integer(traits$Terrestriality)
+colnames(traits)[4] <- "scientificNameStd"
+
+#10 species from the census data are not in the ct data
+table(unique(c$Latin_name) %in% traits$Species)
+
+new_sp <- as.data.frame(unique(c$Latin_name[!c$Latin_name %in% traits$Species]))
+colnames(new_sp)[1] <- "Species"
+new_sp$scientificNameStd <- new_sp$Species
+new_sp$scientificNameStd[new_sp$scientificNameStd == "Cervus unicolor"] <- "Rusa unicolor"
+
+new_sp <- left_join(new_sp, pantheria[,c("Family","Genus", "scientificNameStd", "ActivityCycle",
+                                         "AdultBodyMass_g","Terrestriality", "TrophicLevel")])
+
+traits <- bind_rows(traits, new_sp)
+
+#still missing some terrestriality data for species, will have to fill it in on my own
+traits[is.na(traits$Terrestriality) ,c("Species","Terrestriality")]
+
+########### LEFT OFF HERE
+
+############################################################################################################
 
 #grouping observations by forest type and partition across study period
 #can't do this by census tract since many cover multiple forest types, might not make sense for my analyses
