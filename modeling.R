@@ -688,16 +688,15 @@ table(is.na(c$habitat))
 table(c$trail[is.na(c$habitat)])
 c[is.na(c$habitat),]
 
-##################################################################################################
 #adding species info from singkat file
 singkat <- read.csv(file = "data/vert_singkat-2021-04-08.csv", header = TRUE)
 c <- left_join(c, singkat[,c("New_Singkat","Latin_name","class")], join_by("animal" == "New_Singkat"))
 
-#only include mammals - excluding humans
+#only including mammals - excluding humans and bats
 #NULL or empty values in 'Latin_name': PR = Unid primate, TX = 'confused squirrel or treeshrew'
-c <- c[which(c$class == "Mammal" & !c$Latin_name %in% c("Homo sapiens","","NULL")),]
+c <- c[which(c$class == "Mammal" & !c$Latin_name %in% c("Homo sapiens","","NULL","Unid bat")),]
 
-#40 mammal species in the data set (maybe less, not sure if I should ignore "Tragulus spp")
+#39 mammal species in the data set (maybe less, not sure if I should ignore "Tragulus spp")
 length(unique(c$Latin_name))
 
 #how many observations of each species?
@@ -705,6 +704,7 @@ as.data.frame(table(c$Latin_name)) %>%
   arrange(desc(Freq))
 
 ##########################################################################################################
+#don't run this chunk again
 #add arboreal/terrestrial data from PanTheria
 
 #loading pantheria dataset (Jones et al. 2009)
@@ -738,37 +738,46 @@ traits <- bind_rows(traits, new_sp)
 #still missing some terrestriality data for species, will have to fill it in on my own
 traits[is.na(traits$Terrestriality) ,c("Species","Terrestriality")]
 
-########### LEFT OFF HERE
+#write.csv(traits, file = "data/mammal_list_ct_trait_202405.csv")
 
 ############################################################################################################
+
+#adding terrestriality data to observation table
+traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
+c <- left_join(c, traits[,c("Species","Terrestriality")], join_by("Latin_name" == "Species"))
+
+#no missing data here, and most observations (85%) are of arboreal mammals
+table(is.na(c$Terrestriality))
+table(c$Terrestriality)
 
 #grouping observations by forest type and partition across study period
 #can't do this by census tract since many cover multiple forest types, might not make sense for my analyses
 obs_tab_ft <- c %>% 
   group_by(habitat, Latin_name) %>%
   summarise(n = sum(as.numeric(n_indiv))) %>%
-  pivot_wider(names_from = Latin_name, values_from = 'n') %>%
+  pivot_wider(names_from = Latin_name, values_from = n) %>%
   filter(habitat != "", !is.na(habitat))  #removing the rows associated with no hab designation 
 
 obs_tab_ft$habitat <- factor(obs_tab_ft$habitat, 
                            levels = c("PS", "FS","AB","LS","LG","UG", "MO"),
                              ordered = TRUE)
 
-obs_tab_pt <- test %>% 
-  group_by(partition, animal) %>%
+obs_tab_pt <- c %>% 
+  group_by(partition, Latin_name) %>%
   summarise(n = sum(as.numeric(n_indiv))) %>%
-  pivot_wider(names_from = 'animal', values_from = 'n') %>%
-  filter(partition != "", !is.na(partition)) #removing the rows associated with no part designation 
+  pivot_wider(names_from = 'Latin_name', values_from = 'n') %>%
+  filter(partition != "", !is.na(partition))
 
 obs_tab_pt$partition <- factor(obs_tab_pt$partition, 
                            levels = c("PS.I","FS.I","AB.I","AB.II","LS.I","LS.II",
                                       "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
                            ordered = TRUE)
 
+#########################################################################################################
 ### species richness
 
 #by entire study area
-length(obs_tab_ft[,-1]) #180 unique species observed
+length(obs_tab_ft[,-1]) #39 unique mammal species observed
 
 #by forest type
 
