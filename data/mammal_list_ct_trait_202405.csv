@@ -1,0 +1,71 @@
+Family,Genus,Species,scientificNameStd,ActivityCycle,ActivityCycle_Ref,AdultBodyMass_g,AdultBodyMass_g_Ref,Terrestriality,Terrestriality_Ref,TrophicLevel,TrophicLevel_Ref,Diet,Diet_Ref
+Viverridae,Viverra,Viverra tangalunga,Viverra tangalunga,1,Pantheria,7349.99,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Tupaiidae,Tupaia,Tupaia montana,Tupaia montana,3,Pantheria,168.05,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Tragulidae,Tragulus,Tragulus spp.,Tragulus spp.,1,Inferred,NA,Pantheria,1,Inferred,1,Inferred,H,Inferred
+Tragulidae,Tragulus,Tragulus napu,Tragulus napu,1,Pantheria,5273.67,Pantheria,1,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Tragulidae,Tragulus,Tragulus javanicus,Tragulus javanicus,1,Pantheria,1889.93,Pantheria,1,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Suidae,Sus,Sus barbatus,Sus barbatus,2,Pantheria,135805.95,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Sciuridae,Rhinosciurus,Rhinosciurus laticaudatus,Rhinosciurus laticaudatus,3,Payne et al. 1994,230.3,Pantheria,1,Payne et al. 1994,2,Pantheria,C,Di Marco & Santini 2015
+Sciuridae,Rheithrosciurus,Rheithrosciurus macrotis,Rheithrosciurus macrotis,3,Payne et al. 1994,1353.27,Pantheria,1,Pantheria,1,Payne et al. 1994,H,Di Marco & Santini 2015
+Prionodontidae,Prionodon,Prionodon linsang,Prionodon linsang,1,Pantheria,684.83,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Felidae,Felis,Felis planiceps,Prionailurus planiceps,1,Pantheria,3533.76,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Felidae,Prionailurus,Prionailurus bengalensis,Prionailurus bengalensis,1,Pantheria,2780.97,Pantheria,1,Pantheria,3,Pantheria,C,Di Marco & Santini 2015
+Felidae,Pardofelis,Pardofelis marmorata,Pardofelis marmorata,1,Pantheria,2826.68,Pantheria,1,Pantheria,3,Pantheria,C,Di Marco & Santini 2015
+Viverridae,Paradoxurus,Paradoxurus hermaphroditus,Paradoxurus hermaphroditus,1,Pantheria,3200,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Viverridae,Paguma,Paguma larvata,Paguma larvata,1,Pantheria,4300,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Mustelidae,Mustela,Mustela nudipes,Mustela nudipes,3,Phillipps & Phillipps 2016,569.42,Pantheria,1,Pantheria,3,Payne et al. 1994,C,Di Marco & Santini 2015
+Cervidae,Muntiacus,Muntiacus muntjak,Muntiacus muntjak,2,Pantheria,17611.59,Pantheria,1,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Cervidae,Muntiacus,Muntiacus spp.,Muntiacus muntjak,2,Pantheria,17611.59,Pantheria,1,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Cervidae,Muntiacus,Muntiacus atherodes,Muntiacus atherodes,2,Pantheria,18939.1,Pantheria,1,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Mustelidae,Martes,Martes flavigula,Martes flavigula,3,Pantheria,2504.64,Pantheria,1,Pantheria,3,Pantheria,C,Di Marco & Santini 2015
+Sciuridae,Lariscus,Lariscus insignis,Lariscus insignis,3,Payne et al. 1994,174.41,Pantheria,1,Payne et al. 1994,1,Pantheria,O,Di Marco & Santini 2015
+Hystricidae,Hystrix,Hystrix brachyura,Hystrix brachyura,1,Pantheria,8000,Pantheria,1,Pantheria,2,Pantheria,H,Di Marco & Santini 2015
+Viverridae,Hemigalus,Hemigalus derbyanus,Hemigalus derbyanus,1,Pantheria,1262.7,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Ursidae,Helarctos,Helarctos malayanus,Helarctos malayanus,1,Pantheria,57075.78,Pantheria,1,Pantheria,1,Pantheria,O,Di Marco & Santini 2015
+Erinaceidae,Echinosorex,Echinosorex gymnurus,Echinosorex gymnura,2,Pantheria,756.53,Pantheria,1,Pantheria,2,Pantheria,C,Phillipps & Phillipps 2016
+Viverridae,Hemigalus,Hemigalus hosei,Diplogale hosei,1,Pantheria,2500,Phillipps & Phillipps 2016,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Viverridae,Cynogale,Cynogale bennettii,Cynogale bennettii,2,Pantheria,4246.57,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Felidae,Catopuma,Catopuma badia,Catopuma badia,2,Phillipps & Phillipps 2016,3429.52,Pantheria,1,Pantheria,3,Phillipps & Phillipps 2016,O,Di Marco & Santini 2015
+Viverridae,Arctogalidia,Arctogalidia trivirgata,Arctogalidia trivirgata,1,Pantheria,2323.79,Pantheria,1,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Viverridae,Arctictis,Arctictis binturong,Arctictis binturong,1,Pantheria,12999.99,Pantheria,1,Pantheria,1,Pantheria,H,Di Marco & Santini 2015
+Mustelidae,Aonyx,Aonyx cinerea,Aonyx cinerea,1,Pantheria,3527.59,Pantheria,1,Pantheria,3,Pantheria,C,Di Marco & Santini 2015
+Sciuridae,Lariscus,Lariscus hosei,Lariscus hosei,NA,NA,180,NA,1,NA,NA,NA,NA,NA
+Tupaiidae,Tupaia,Tupaia longipes (glis),Tupaia longipes,3,Pantheria,168.05,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Tupaiidae,Tupaia,Tupaia gracilis,Tupaia gracilis,3,Pantheria,111.95,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Hystricidae,Trichys,Trichys fasciculata,Trichys fasciculata,1,Pantheria,1750,Pantheria,2,Pantheria,1,Payne et al. 1994,H,Di Marco & Santini 2015
+Tarsiidae,Tarsius,Tarsius bancanus,Tarsius bancanus,1,Pantheria,114.39,Pantheria,2,Pantheria,2,Pantheria,C,Di Marco & Santini 2015
+Sciuridae,Sundasciurus,Sundasciurus lowii,Sundasciurus lowii,3,Pantheria,84.99,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Sciuridae,Sundasciurus,Sundasciurus jentinki,Sundasciurus jentinki,3,Payne et al. 1994,NA,Pantheria,2,Payne et al. 1994,3,Phillipps & Phillipps 2016,H,Di Marco & Santini 2015
+Sciuridae,Sundasciurus,Sundasciurus hippurus,Sundasciurus hippurus,3,Phillipps & Phillipps 2016,357.79,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Sciuridae,Ratufa,Ratufa affinis,Ratufa affinis,3,Phillipps & Phillipps 2016,1155.82,Pantheria,2,Pantheria,2,Pantheria,H,Di Marco & Santini 2015
+Cercopithecidae,Presbytis,Presbytis rubicunda rubida,Presbytis rubicunda,3,Pantheria,6348.53,Pantheria,2,Payne et al. 1994,1,Pantheria,H,Di Marco & Santini 2015
+Pongidae,Pongo,Pongo pygmaeus,Pongo pygmaeus,3,Pantheria,53408.29,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Felidae,Neofelis,Neofelis nebulosa,Neofelis nebulosa,2,Pantheria,14945.05,Pantheria,1,Changed to terrestrial by GRE,3,Pantheria,C,Di Marco & Santini 2015
+Manidae,Manis,Manis javanica,Manis javanica,1,Phillipps & Phillipps 2016,4861.71,Pantheria,2,Phillipps & Phillipps 2016,3,Pantheria,C,Di Marco & Santini 2015
+Cercopithecidae,Macaca,Macaca nemestrina,Macaca nemestrina,3,Pantheria,7820.78,Pantheria,1,Changed to terrestrial by GRE,1,Pantheria,O,Di Marco & Santini 2015
+Cercopithecidae,Macaca,Macaca fascicularis,Macaca fascicularis,3,Pantheria,4569.32,Pantheria,2,Payne et al. 1994,2,Pantheria,H,Di Marco & Santini 2015
+Sciuridae,Exilisciurus,Exilisciurus exilis,Exilisciurus exilis,3,Payne et al. 1994,21.75,Pantheria,2,Payne et al. 1994,2,Payne et al. 1994,O,Di Marco & Santini 2015
+Sciuridae,Dremomys,Dremomys everetti,Dremomys everetti,3,Phillipps & Phillipps 2016,129.78,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Sciuridae,Callosciurus,Callosciurus nonatus,Callosciurus notatus,3,Pantheria,209.49,Pantheria,2,Pantheria,2,Pantheria,O,Di Marco & Santini 2015
+Sciuridae,Callosciurus,Callosciurus prevostii,Callosciurus prevostii,3,NA,400,NA,2,NA,2,NA,NA,NA
+Sciuridae,Sciuridae,Unid Squirrel,Unid Squirrel,NA,,NA,,2,GRE,NA,,,
+Muridae,,Unid Rat,Unid Rat,1,Own observations,146.5,Phillipps & Phillipps 2016 (mean of all listed species with ranges in GP),1,,2,Phillipps & Phillipps 2016,,
+Viverridae,Viverridae,Unid civet,Unid civet,NA,,NA,,1,,NA,,,
+Unid bats,Unid bats,Unid bats,Unid bats,NA,,NA,,NA,,NA,,,
+Tupaiidae,Tupaia,Tupaia tana,Tupaia tana,3,Pantheria,182.33,Pantheria,1,Payne et al. 1994,2,Pantheria,O,Di Marco & Santini 2015
+Tupaiidae,Tupaia,Tupaia splendidula,Tupaia splendidula,3,Pantheria,168.05,Pantheria,1,Pantheria & Payne,2,Pantheria,O,Di Marco & Santini 2015
+Tupaiidae,Tupaia,Tupaia sp.,Tupaia sp.,3,Inferred,NA,Pantheria,NA,Pantheria,2,Inferred,O,Inferred
+Tupaiidae,Tupaia,Tupaia dorsalis,Tupaia dorsalis,3,Pantheria,168.05,Pantheria,1,Payne et al. 1994,2,Pantheria,NA,Di Marco & Santini 2015
+Soricidae,Soricidae,Soricidae,Soricidae,NA,,NA,,1,,NA,,,
+Hominidae,Homo,Homo sapiens,Homo sapiens,3,Pantheria,58540.63,Pantheria,1,Pantheria,NA,Pantheria,NA,Di Marco & Santini 2015
+Herpestidae,Herpestes,Herpestes sp.,Herpestes sp.,NA,,NA,,1,GRE,NA,,,
+Confused Squirrel or Treeshrew,Confused,Confused Squirrel or Treeshrew,Confused Squirrel or Treeshrew,NA,,NA,,NA,,NA,,,
+Canidae,Canis,Canis familiaris,Canis familiaris,NA,,NA,,1,,NA,,,
+Hylobatidae,Hylobates,Hylobates albibarbis,Hylobates albibarbis,NA,NA,NA,NA,2,GRE,NA,NA,NA,NA
+NA,NA,Unid squirrel,Unid squirrel,NA,NA,NA,NA,2,NA,NA,NA,NA,NA
+NA,NA,Unid bat,Unid bat,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+NA,NA,Unid pygmy squirrel,Unid pygmy squirrel,NA,NA,NA,NA,2,NA,NA,NA,NA,NA
+NA,NA,Unid flying squirrel,Unid flying squirrel,NA,NA,NA,NA,2,GRE,NA,NA,NA,NA
+Cercopithecidae,Presbytis,Presbytis frontata,Presbytis frontata,3,NA,6096.6,NA,2,GRE,NA,NA,NA,NA
+NA,NA,Unid Civet,Unid Civet,NA,NA,NA,NA,1,GRE,NA,NA,NA,NA
+Cervidae,Rusa,Cervus unicolor,Rusa unicolor,2,NA,177522.9,NA,1,GRE,1,NA,NA,NA
