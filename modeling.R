@@ -852,15 +852,18 @@ obs_tab_pt_std <- sweep(obs_tab_pt[,-1], 1, obs_tab_pt$effort, FUN = "/")
 rownames(obs_tab_pt_std) <- obs_tab_pt$partition
 obs_tab_pt_std[is.na(obs_tab_pt_std)] <- 0
 
-shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std, index = "shannon"))
-colnames(shan_by_pt)[colnames(shan_by_pt) == 'diversity(obs_tab_pt_std, index = "shannon")'] <- 'shannon'
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[,-40], index = "shannon"))
+colnames(shan_by_pt)[1] <- 'shannon'
 shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
 
 div_tab_pt <- left_join(div_tab_pt, shan_by_pt, by = "partition")
 rm(shan_by_pt)
 
 #by partition - terrestrial species only
-shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 1])], index = "shannon"))
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[,which(colnames(obs_tab_pt_std[,-40]) 
+                                                      %in% traits$Species[!is.na(traits$Terrestriality) 
+                                                                          & traits$Terrestriality == 1])], 
+                                      index = "shannon"))
 colnames(shan_by_pt)[1] <- 'shannon'
 shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
 
@@ -868,7 +871,10 @@ div_tab_pt_terr <- left_join(div_tab_pt_terr, shan_by_pt, by = "partition")
 rm(shan_by_pt)
 
 #by partition - arboreal species only
-shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 2])], index = "shannon"))
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[,which(colnames(obs_tab_pt_std[,-40]) 
+                                                      %in% traits$Species[!is.na(traits$Terrestriality)
+                                                                          & traits$Terrestriality == 2])], 
+                                      index = "shannon"))
 colnames(shan_by_pt)[1] <- 'shannon'
 shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
 
@@ -910,6 +916,7 @@ div_tab_pt_arb$partition <- factor(div_tab_pt_arb$partition,
                                                "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
                                     ordered = TRUE)
 
+###########################################################################################################
 ### Diversity metrics visualization 
 
 #species richness by ft
@@ -937,21 +944,29 @@ ggplot(div_tab_pt, aes(partition, rich_std)) +
   labs(title = "Mammal Richness by Partition", subtitle = "all census data", 
        x = "", y = "n species / survey effort")
 
+#species richness by pt - raw counts
+ggplot(div_tab_pt, aes(partition, richness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Mammal Richness by Partition - Raw Counts", subtitle = "all census data", 
+       x = "", y = "n species")
+
 #species richness by pt - terrestrial only
-ggplot(div_tab_pt_terr, aes(partition, rich_std)) +
+ggplot(div_tab_pt_terr, aes(partition, richness)) +
   geom_col() +
   coord_flip() +
   theme_classic() +
   labs(title = "Terrestrial Mammal Richness by Partition", 
-       x = "", y = "n species / survey effort")
+       x = "", y = "n species")
 
 #species richness by pt - arboreal only
-ggplot(div_tab_pt_arb, aes(partition, rich_std)) +
+ggplot(div_tab_pt_arb, aes(partition, richness)) +
   geom_col() +
   coord_flip() +
   theme_classic() +
   labs(title = "Arboreal Mammal Richness by Partition", 
-       x = "", y = "n species / survey effort")
+       x = "", y = "n species")
 
 
 #species diversity by ft
@@ -960,7 +975,7 @@ ggplot(div_tab_ft, aes(habitat, shannon)) +
   coord_flip() +
   theme_classic() +
   labs(title = "Mammal Diversity by Forest Type", subtitle = "all census data", 
-       x = "", y = "Shannon diversity index / survey effort")
+       x = "", y = "Shannon diversity index")
 
 #species diversity by pt
 ggplot(div_tab_pt, aes(partition, shannon)) +
@@ -968,7 +983,7 @@ ggplot(div_tab_pt, aes(partition, shannon)) +
   coord_flip() +
   theme_classic() +
   labs(title = "Mammal Diversity by Partition", subtitle = "all census data", 
-       x = "", y = "Shannon diversity index / survey effort")
+       x = "", y = "Shannon diversity index")
 
 #species diversity by pt - terrestrial
 ggplot(div_tab_pt_terr, aes(partition, shannon)) +
@@ -976,17 +991,16 @@ ggplot(div_tab_pt_terr, aes(partition, shannon)) +
   coord_flip() +
   theme_classic() +
   labs(title = "Terrestrial Mammal Diversity by Partition", 
-       x = "", y = "Shannon diversity index / survey effort")
+       x = "", y = "Shannon diversity index")
 
-#species diversity by pt - arboreal - THIS DOESN'T LOOK RIGHT
+#species diversity by pt - arboreal
 ggplot(div_tab_pt_arb, aes(partition, shannon)) +
   geom_col() +
   coord_flip() +
   theme_classic() +
   labs(title = "Arboreal Mammal Diversity by Partition", 
-       x = "", y = "Shannon diversity index / survey effort")
+       x = "", y = "Shannon diversity index")
 
-########## LEFT OFF HERE
 
 #species evenness by ft
 ggplot(div_tab_ft, aes(habitat, evenness)) +
@@ -994,7 +1008,7 @@ ggplot(div_tab_ft, aes(habitat, evenness)) +
   coord_flip() +
   theme_classic() +
   labs(title = "Mammal Evenness by Forest Type", subtitle = "all census data", 
-       x = "", y = "Pielou index / survey effort")
+       x = "", y = "Pielou index")
 
 #species evenness by pt
 ggplot(div_tab_pt, aes(partition, evenness)) +
@@ -1002,5 +1016,20 @@ ggplot(div_tab_pt, aes(partition, evenness)) +
   coord_flip() +
   theme_classic() +
   labs(title = "Mammal Evenness by Partition", subtitle = "all census data", 
-       x = "", y = "Pielou index / survey effort")
+       x = "", y = "Pielou index")
 
+#species evenness by pt - terrestrial
+ggplot(div_tab_pt_terr, aes(partition, evenness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Terrestrial Mammal Evenness by Partition",
+       x = "", y = "Pielou index")
+
+#species evenness by pt - arboreal
+ggplot(div_tab_pt_arb, aes(partition, evenness)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Arboreal Mammal Evenness by Partition",
+       x = "", y = "Pielou index")
