@@ -703,6 +703,7 @@ length(unique(c$Latin_name))
 as.data.frame(table(c$Latin_name)) %>%
   arrange(desc(Freq))
 
+
 ##########################################################################################################
 #don't run this chunk again
 #add arboreal/terrestrial data from PanTheria
@@ -739,8 +740,8 @@ traits <- bind_rows(traits, new_sp)
 traits[is.na(traits$Terrestriality) ,c("Species","Terrestriality")]
 
 #write.csv(traits, file = "data/mammal_list_ct_trait_202405.csv")
-
 ############################################################################################################
+
 
 #adding terrestriality data to observation table
 traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
@@ -776,15 +777,11 @@ obs_tab_pt$partition <- factor(obs_tab_pt$partition,
 #########################################################################################################
 ### species richness
 
-#by entire study area
-length(obs_tab_ft[,-1]) #39 unique mammal species observed
+#by entire study area - 39 unique mammal species observed
+length(obs_tab_ft[,-1])
 
 #by forest type
-
-#turning NA to 0
-#obs_tab_ft[is.na(obs_tab_ft)] <- 0
-
-#adding survey effort
+#adding survey effort - STILL NEED TO FIX HOW 15A & B SURVEY EFFORT IS FACTORED IN HERE
 obs_tab_ft <- ca %>%
   group_by(habitat) %>%
   summarize(effort = sum(actual_effort)) %>%
@@ -800,8 +797,6 @@ div_tab_ft <- obs_tab_ft %>%
 
 
 #by partition
-#obs_tab_pt[is.na(obs_tab_pt)] <- 0
-
 #adding survey effort
 obs_tab_pt <- ca %>%
   group_by(partishun) %>%
@@ -816,19 +811,37 @@ div_tab_pt <- obs_tab_pt %>%
   mutate(rich_std = richness/effort) %>%
   arrange(desc(partition))
 
+div_tab_pt_terr <- obs_tab_pt %>%
+  select(partition, which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 1])) %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(partition = 1, richness) %>%
+  left_join(., obs_tab_pt[,c("partition","effort")]) %>%
+  mutate(rich_std = richness/effort) %>%
+  arrange(desc(partition))
+
+div_tab_pt_arb <- obs_tab_pt %>%
+  select(partition, which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 2])) %>%
+  rowwise() %>%
+  mutate(richness = sum(!is.na(c_across(-1)))) %>%
+  select(partition = 1, richness) %>%
+  left_join(., obs_tab_pt[,c("partition","effort")]) %>%
+  mutate(rich_std = richness/effort) %>%
+  arrange(desc(partition))
 
 ### shannon diversity
 
-#by entire study area - not controlling for survey effory
-diversity(colSums(obs_tab_ft[,-c(1,182)], na.rm = TRUE), index = "shannon")
+#by entire study area - not controlling for survey effort
+diversity(colSums(obs_tab_ft[,setdiff(names(obs_tab_ft), c("habitat", "effort"))], na.rm = TRUE), 
+          index = "shannon")
 
 #by forest type
 obs_tab_ft_std <- sweep(obs_tab_ft[,-1], 1, obs_tab_ft$effort, FUN = "/")
 rownames(obs_tab_ft_std) <- obs_tab_ft$habitat
 obs_tab_ft_std[is.na(obs_tab_ft_std)] <- 0
 
-shan_by_ft <- as.data.frame(diversity(obs_tab_ft_std, index = "shannon"))
-colnames(shan_by_ft)[colnames(shan_by_ft) == 'diversity(obs_tab_ft_std, index = "shannon")'] <- 'shannon'
+shan_by_ft <- as.data.frame(diversity(obs_tab_ft_std[,-40], index = "shannon"))
+colnames(shan_by_ft)[1] <- 'shannon'
 shan_by_ft <- rownames_to_column(shan_by_ft, var = "habitat")
 
 div_tab_ft <- left_join(div_tab_ft, shan_by_ft, by = "habitat")
@@ -846,14 +859,36 @@ shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
 div_tab_pt <- left_join(div_tab_pt, shan_by_pt, by = "partition")
 rm(shan_by_pt)
 
+#by partition - terrestrial species only
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 1])], index = "shannon"))
+colnames(shan_by_pt)[1] <- 'shannon'
+shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
+
+div_tab_pt_terr <- left_join(div_tab_pt_terr, shan_by_pt, by = "partition")
+rm(shan_by_pt)
+
+#by partition - arboreal species only
+shan_by_pt <- as.data.frame(diversity(obs_tab_pt_std[which(colnames(obs_tab_pt) %in% traits$Species[traits$Terrestriality == 2])], index = "shannon"))
+colnames(shan_by_pt)[1] <- 'shannon'
+shan_by_pt <- rownames_to_column(shan_by_pt, var = "partition")
+
+div_tab_pt_arb <- left_join(div_tab_pt_arb, shan_by_pt, by = "partition")
+rm(shan_by_pt)
+
 
 ### Pielou's diversity measure of species evenness
 
 #by forest type
 div_tab_ft$evenness <- div_tab_ft$shannon / log(div_tab_ft$richness)
 
-#by partition
+#by partition - all 
 div_tab_pt$evenness <- div_tab_pt$shannon / log(div_tab_pt$richness)
+
+#by partition - terrestrial
+div_tab_pt_terr$evenness <- div_tab_pt_terr$shannon / log(div_tab_pt_terr$richness)
+
+#by partition - arboreal
+div_tab_pt_arb$evenness <- div_tab_pt_arb$shannon / log(div_tab_pt_arb$richness)
 
 #ordering forest types and partitions
 div_tab_ft$habitat <- factor(div_tab_ft$habitat, 
@@ -865,6 +900,16 @@ div_tab_pt$partition <- factor(div_tab_pt$partition,
                                           "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
                                ordered = TRUE)
 
+div_tab_pt_terr$partition <- factor(div_tab_pt_terr$partition, 
+                               levels = c("PS.I","FS.I","AB.I","AB.II","LS.I","LS.II",
+                                          "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
+                               ordered = TRUE)
+
+div_tab_pt_arb$partition <- factor(div_tab_pt_arb$partition, 
+                                    levels = c("PS.I","FS.I","AB.I","AB.II","LS.I","LS.II",
+                                               "LG.I","LG.II","UG.I","UG.II","MO.I","MO.II","MO.III"),
+                                    ordered = TRUE)
+
 ### Diversity metrics visualization 
 
 #species richness by ft
@@ -872,40 +917,90 @@ div_tab_pt$partition <- factor(div_tab_pt$partition,
 ggplot(div_tab_ft, aes(habitat, rich_std)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Richness by Forest Type", subtitle = "all census data", 
+       x = "", y = "n species / survey effort")
 
 #raw counts
 ggplot(div_tab_ft, aes(habitat, richness)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Richness by Forest Type - Raw Counts", subtitle = "all census data", 
+       x = "", y = "n species / survey effort")
 
 #species richness by pt
 ggplot(div_tab_pt, aes(partition, rich_std)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Richness by Partition", subtitle = "all census data", 
+       x = "", y = "n species / survey effort")
+
+#species richness by pt - terrestrial only
+ggplot(div_tab_pt_terr, aes(partition, rich_std)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Terrestrial Mammal Richness by Partition", 
+       x = "", y = "n species / survey effort")
+
+#species richness by pt - arboreal only
+ggplot(div_tab_pt_arb, aes(partition, rich_std)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Arboreal Mammal Richness by Partition", 
+       x = "", y = "n species / survey effort")
+
 
 #species diversity by ft
 ggplot(div_tab_ft, aes(habitat, shannon)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Diversity by Forest Type", subtitle = "all census data", 
+       x = "", y = "Shannon diversity index / survey effort")
 
 #species diversity by pt
 ggplot(div_tab_pt, aes(partition, shannon)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Diversity by Partition", subtitle = "all census data", 
+       x = "", y = "Shannon diversity index / survey effort")
+
+#species diversity by pt - terrestrial
+ggplot(div_tab_pt_terr, aes(partition, shannon)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Terrestrial Mammal Diversity by Partition", 
+       x = "", y = "Shannon diversity index / survey effort")
+
+#species diversity by pt - arboreal - THIS DOESN'T LOOK RIGHT
+ggplot(div_tab_pt_arb, aes(partition, shannon)) +
+  geom_col() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Arboreal Mammal Diversity by Partition", 
+       x = "", y = "Shannon diversity index / survey effort")
+
+########## LEFT OFF HERE
 
 #species evenness by ft
 ggplot(div_tab_ft, aes(habitat, evenness)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Evenness by Forest Type", subtitle = "all census data", 
+       x = "", y = "Pielou index / survey effort")
 
 #species evenness by pt
 ggplot(div_tab_pt, aes(partition, evenness)) +
   geom_col() +
   coord_flip() +
-  theme_classic()
+  theme_classic() +
+  labs(title = "Mammal Evenness by Partition", subtitle = "all census data", 
+       x = "", y = "Pielou index / survey effort")
+
