@@ -1,5 +1,5 @@
 ---
-title: "terrestrial modeling"
+title: "modeling terrestrial and arboreal mammals at GPNP"
 author: "Gene Estrada"
 date: "2024-05-21"
 output: html_document
@@ -44,9 +44,9 @@ m$partition <- factor(m$partition, levels = c("PS1", "FS1", "AB1", "AB2",
                     ordered = TRUE)
 
 #mammal observation table
-species_table <- as.data.frame(table(m$Species, m$habitat))
-species_table <- pivot_wider(species_table, names_from = "Var2", values_from = "Freq")
-colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
+#species_table <- as.data.frame(table(m$Species, m$habitat))
+#species_table <- pivot_wider(species_table, names_from = "Var2", values_from = "Freq")
+#colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
 #write.csv(species_table, file = "species_observation_table_byFT.csv")
 
 #LiDAR-derived metrics data
@@ -84,6 +84,10 @@ ct_active_days <- ct2 %>%
   rename(locationID = Deployment.Location.ID)
 
 stand_mets <- left_join(stand_mets, ct_active_days) 
+
+#adding PanTheria terrestriality data
+traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
+m <- left_join(m, traits[,c("Species","Terrestriality")], by = "Species")
 ```
 
 
@@ -91,32 +95,28 @@ stand_mets <- left_join(stand_mets, ct_active_days)
 
 ### Entire Study Area
 
-Excluding unid animals.
-all camera trap locations: 55 species. Compared to only CT locations that have LiDAR data: 52 species
+Excluding arboreal mammals.
+all camera trap locations: 40 species. Compared to only CT locations that have LiDAR data: 38 species
 ```{r}
-#all camera trap locations: 55 species
+#all camera trap locations
 m %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                      "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(SpeciesRichness = n_distinct(Species))
 
-#only camera trap locations that have LiDAR scan data: 52 species
+#only camera trap locations that have LiDAR scan data
 m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(locationID %in% stand_mets$locationID & Terrestriality == 1) %>%
   summarise(SpeciesRichness = n_distinct(Species))
 ```
 
 ### By forest type
 
-Excluding unid animals
+Excluding arboreal mammals
 ```{r}
 #all ct locations
 n_by_ft <- m %>%
   group_by(habitat) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(habitat))
 
@@ -124,8 +124,7 @@ n_by_ft <- m %>%
 n_by_ft <- m %>%
   filter(locationID %in% stand_mets$locationID) %>%
   group_by(habitat) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(n.scanned = n_distinct(Species)) %>%
   left_join(n_by_ft) %>%
   arrange(desc(habitat))
@@ -143,8 +142,7 @@ Excluding unid animals
 #all ct locations
 n_by_pt <- m %>%
   group_by(partition) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(partition))
 
@@ -152,8 +150,7 @@ n_by_pt <- m %>%
 n_by_pt <- m %>%
   filter(locationID %in% stand_mets$locationID) %>%
   group_by(partition) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(n.scanned = n_distinct(Species)) %>%
   left_join(n_by_pt) %>%
   arrange(desc(partition))
@@ -161,6 +158,14 @@ n_by_pt <- m %>%
 #the scanned sites consistently observe fewer species but this is especially true in UG1 and LS2
 n_by_pt$diff <- n_by_pt$n.all - n_by_pt$n.scanned
 n_by_pt
+
+#by aggregated montane partition
+n_by_pt_mod <- m %>%
+  mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition))) %>%
+  group_by(partition) %>%
+  filter(Terrestriality == 1) %>%
+  summarise(n.all = n_distinct(Species)) %>%
+  arrange(desc(partition))
 ```
 
 ### By camera trap location
@@ -171,17 +176,16 @@ Excluding unid animals
 #all CT locations
 n_by_ct <- m %>%
   group_by(locationID) %>%
-  filter(!(Species %in% c("Confused Squirrel or Treeshrew","Tragulus spp.","Tupai sp.","Unid bats",
-                          "Unid civet","Unid rat","Unid squirrel"))) %>%
+  filter(Terrestriality == 1) %>%
   summarise(n.all = n_distinct(Species))
 
 #compare 'all CT' and 'scanned CT' location richness distributions
 #the 'scanned CT' locations seem biased towards higher species richness
-hist(n_by_ct$n.all, breaks = 30,
+hist(n_by_ct$n.all, breaks = 25,
      main = "species richness - all ct locations", xlab = "n species")
 summary(n_by_ct$n.all)
 
-hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 30, xlim = c(0,30),
+hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 25,
      main = "species richness - scanned ct locations only", xlab = "n species")
 summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 ```
