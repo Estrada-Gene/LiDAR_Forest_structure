@@ -30,7 +30,7 @@ stand_mets$partition <- factor(stand_mets$partition,
                                                 "UG1", "UG2", "MO1", "MO2"),
                                        ordered = TRUE)
 #all tree metrics
-tree_mets <- read.csv(file = "all.tree.mets.csv", header = TRUE)
+tree_mets <- read.csv(file = "data/all.tree.mets.csv", header = TRUE)
 
 #ordering habitat by elevation
 tree_mets$habitat <- factor(tree_mets$habitat, 
@@ -45,7 +45,7 @@ tree_mets$partition <- factor(tree_mets$partition,
                                                 "UG1", "UG2", "MO1", "MO2"),
                                        ordered = TRUE)
 #all stand metrics
-all_stand_mets <- read.csv(file = "all.stand.mets.csv", header = TRUE)
+all_stand_mets <- read.csv(file = "data/all.stand.mets.csv", header = TRUE)
 
 #changing default setting in ggplot to center plot titles
 theme_update(plot.title = element_text(hjust = 0.5))
@@ -548,7 +548,6 @@ ggplot(stand_mets, aes(altitude, vFRcanopy)) +
 ```
 
 ### Vertical rumple index
-even after controlling for elevation there doesn't seem to be much variation here. Alone, this metric mirrors elevation, so I won't be able to use this for modeling
 ```{r}
 #distribution
 hist(stand_mets$vzrumple, breaks = 25, las = 1,
@@ -558,7 +557,7 @@ hist(stand_mets$vzrumple, breaks = 25, las = 1,
 summary(stand_mets$vzrumple)
 
 #by forest type
-ggplot(stand_mets, aes(habitat, vzrumple/altitude)) + 
+ggplot(stand_mets, aes(habitat, vzrumple)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.1) + 
   labs(title = "Vertical Rumple", x = "", y = "Rumple Index") + 
@@ -567,7 +566,7 @@ ggplot(stand_mets, aes(habitat, vzrumple/altitude)) +
   theme(plot.title = element_text(hjust = 0.5))
 
 #by partition
-ggplot(stand_mets, aes(partition, vzrumple/altitude)) + 
+ggplot(stand_mets, aes(partition, vzrumple)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.1) + 
   labs(title = "Vertical Rumple", x = "", y = "Rumple Index") + 
@@ -576,7 +575,7 @@ ggplot(stand_mets, aes(partition, vzrumple/altitude)) +
   theme(plot.title = element_text(hjust = 0.5))
 
 #by elevation
-ggplot(stand_mets, aes(altitude, vzrumple/altitude)) + 
+ggplot(stand_mets, aes(altitude, vzrumple)) + 
   geom_point() +
   geom_smooth(se = TRUE) +
   labs(title = "Vertical Rumple", x = "elevation (m)", y = "Rumple Index") + 
@@ -639,8 +638,6 @@ plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, p9, nrow = 3)
 ## All trees metrics
 
 Using metrics from individual trees from all scans. Total of 2,010 trees detected by the FORTLS functions.
-
-summary
 ```{r}
 #tree heights
 t1 <- ggplot(tree_mets, aes(h)) +
