@@ -11,8 +11,7 @@ editor_options:
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
-	warning = FALSE
-)
+	warning = FALSE)
 
 library(tidyverse)
 library(vegan)
@@ -43,13 +42,13 @@ m$partition <- factor(m$partition, levels = c("PS1", "FS1", "AB1", "AB2",
                                           "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
                     ordered = TRUE)
 
-#mammal observation table
+#species observation summary table
 #species_table <- as.data.frame(table(m$Species, m$habitat))
 #species_table <- pivot_wider(species_table, names_from = "Var2", values_from = "Freq")
 #colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
 #write.csv(species_table, file = "species_observation_table_byFT.csv")
 
-#LiDAR-derived metrics data
+#LiDAR-derived metrics from {FORTLS} and {lidRmetrics}
 stand_mets <- read.csv(file = "data/select.stand.mets.csv", header = TRUE)
 stand_mets$habitat <- factor(stand_mets$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
                                           "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"),
@@ -83,20 +82,19 @@ ct_active_days <- ct2 %>%
   summarise(act.days = sum(act.per)) %>%
   rename(locationID = Deployment.Location.ID)
 
-stand_mets <- left_join(stand_mets, ct_active_days) 
+stand_mets <- left_join(stand_mets, ct_active_days, by = "locationID") 
 
 #adding PanTheria terrestriality data
 traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
 m <- left_join(m, traits[,c("Species","Terrestriality")], by = "Species")
 ```
 
-
-## SPECIES RICHNESS 
+## SPECIES RICHNESS
 
 ### Entire Study Area
 
-Excluding arboreal mammals.
-all camera trap locations: 40 species. Compared to only CT locations that have LiDAR data: 38 species
+Excluding arboreal mammals. all camera trap locations: 40 species. Compared to only CT locations that have LiDAR data: 38 species
+
 ```{r}
 #all camera trap locations
 m %>%
@@ -112,6 +110,7 @@ m %>%
 ### By forest type
 
 Excluding arboreal mammals
+
 ```{r}
 #all ct locations
 n_by_ft <- m %>%
@@ -138,6 +137,7 @@ n_by_ft
 ### By partition
 
 Excluding unid animals
+
 ```{r}
 #all ct locations
 n_by_pt <- m %>%
@@ -162,6 +162,7 @@ n_by_pt
 ```
 
 Again, but for terrestrial mammals only
+
 ```{r}
 #filtering - unsure if these spp. obs are potentially unique species or not, removing for now
 m_filtered <- m %>%
@@ -181,7 +182,6 @@ ct_div_mets_terr_mod <- m_filtered %>%
   summarise(n.terr = n_distinct(Species)) %>%
   arrange(desc(partition))
 ```
-
 
 ### By camera trap location
 
@@ -205,7 +205,9 @@ summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 ```
 
 ## SHANNON DIVERSITY
+
 ### By camera trap location
+
 ```{r}
 shannon_ct <- diversity(table(m_filtered$locationID, m_filtered$Species), index = "shannon")
 shannon_ct <- rownames_to_column(as.data.frame(shannon_ct), var = "locationID")
@@ -225,6 +227,7 @@ summary(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID])
 ### By partition
 
 Comparing Shannon diversity aggregated at partition for all ct locations to only locations with LiDAR data
+
 ```{r}
 shannon_all <- diversity(table(m$partition, m$Species), index = "shannon")
 shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "partition")
@@ -240,6 +243,7 @@ shannon_pt
 ```
 
 Creating Shannon diversity metrics for terrestrial mammals only, for all partitions and partitions with montane aggregate
+
 ```{r}
 ### All partitions
 
@@ -261,8 +265,8 @@ ct_div_mets_terr_mod <- left_join(ct_div_mets_terr_mod, shan_terr, by = "partiti
 rm(shan_terr)
 ```
 
-
 ### By forest type
+
 ```{r}
 #calculating shannon diversity index for all and scanned CT locations
 shannon_all <- diversity(table(m$habitat, m$Species), index = "shannon")
@@ -284,6 +288,7 @@ shannon_ft
 ### By camera trap location
 
 Pielou's diversity measure of species evenness
+
 ```{r}
 div_mets <- shannon_ct %>%
   left_join(., n_by_ct) %>%
@@ -297,23 +302,25 @@ hist(div_mets$div_even, breaks = 25,
 ### By partition
 
 Pielou's diversity measure of species evenness
+
 ```{r}
 ct_div_mets_terr$evenness <- ct_div_mets_terr$Shannon / log(ct_div_mets_terr$n.terr)
 
 ct_div_mets_terr_mod$evenness <- ct_div_mets_terr_mod$Shannon / log(ct_div_mets_terr_mod$n.terr)
 ```
 
-
 adding diversity metrics to forest structure metrics df
+
 ```{r}
 stand_mets <- left_join(stand_mets, div_mets[,c("locationID","n.all","shannon_ct","div_even")], 
                         by = "locationID")
 stand_mets$div_even <- as.numeric(stand_mets$div_even)
 ```
 
-
 ## COMMUNITY METRICS VISUALIZATION
+
 #### For terrestrial mammals only
+
 ```{r, include=FALSE}
 #add habitat data to diversity metrics table
 div_mets <- left_join(div_mets, ct[,c("locationID","habitat","partition","altitude")])
@@ -331,6 +338,7 @@ div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
 ```
 
 ### All diversity metrics by CT location/forest type
+
 ```{r fig.height=4, fig.width=10}
 #plotting richness by all and scanned locations in same plot 
 p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
@@ -369,6 +377,7 @@ cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
 ```
 
 ### All diversity metrics by elevation
+
 ```{r fig.height=4, fig.width=10}
 #species richness by elevation - 'all CT locations' and "scanned locations' in the same plot
 p1 <- ggplot(div_mets, aes(x = altitude, y = n.all)) +
@@ -409,69 +418,70 @@ p3 <- ggplot(div_mets, aes(x = altitude, y = div_even)) +
 cowplot::plot_grid(p1,p2,p3, nrow = 1)
 ```
 
-
 ## MODELING - Terrestrial mammals (CT data)
+
 ```{r}
 #scale and center numeric predictors
-stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
+stand_mets <- stand_mets %>% mutate(across(c(5:16, 22:25, 27:29), scale, .names = "{.col}.sc"))
 ```
 
 #### Descriptions of forest structure metrics used in models
 
-I used {FORTLS} to extract the following metrics: 
+I used {FORTLS} to extract the following metrics:
 
-1. max.height - maximum height of trees in the stand, in m
+1.  max.height - maximum height of trees in the stand, in m
 
-2. mean.tree.h - mean tree height in the stand, in m.
+2.  mean.tree.h - mean tree height in the stand, in m.
 
-3. CRR.rho - canopy relief ratio, using rho for horizontal distance. A measure of canopy variation, with lower scores indicating lower local variation in canopy surface, i.e., more uniform age canopy/ less canopy surface complexity. 
+3.  CRR.rho - canopy relief ratio, using rho for horizontal distance. A measure of canopy variation, with lower scores indicating lower local variation in canopy surface, i.e., more uniform age canopy/ less canopy surface complexity.
 
-4. sd.r - standard deviation of tree heights in stand in m. I've seen this value used as an approximation for vertical stratification.  
+4.  sd.r - standard deviation of tree heights in stand in m. I've seen this value used as an approximation for vertical stratification.
 
-5. mean.dbh - mean diameter at breast height of trees in stand, in cm (measured at height of 1.3m)
+5.  mean.dbh - mean diameter at breast height of trees in stand, in cm (measured at height of 1.3m)
 
-6. basal.area - basal area of trees in the stand (m2/ha)
+6.  basal.area - basal area of trees in the stand (m2/ha)
 
-7. stand.dens - density of trees in the stand (trees/ha)
+7.  stand.dens - density of trees in the stand (trees/ha)
 
-8. stem.vol - volume of trees in the stand (m3/ha)
+8.  stem.vol - volume of trees in the stand (m3/ha)
 
-9. pts.below.2m - shows the number of points in the point cloud that are below 2m. 
-
+9.  pts.below.2m - shows the number of points in the point cloud that are below 2m.
 
 I used {lidr} and {lidRmetrics} to extract the following metrics:
 
 10. zentropy - normalized Shannon diversity index of z (height) values. Describes vertical complexity.
 
-11. lad.max - Leaf Area Density maximum value for 1m vertical bins. Describes maximum foliage cover of the point cloud. 
+11. lad.max - Leaf Area Density maximum value for 1m vertical bins. Describes maximum foliage cover of the point cloud.
 
-12. rumple - Rumple index (rugosity), a ratio of the canopy surface area to it's projected ground area. 
+12. rumple - Rumple index (rugosity), a ratio of the canopy surface area to it's projected ground area.
 
 vn - number of 1m voxels created for the following volumetric metrics.
 
-13. vFRcanopy - ratio of filled to empty voxels, only counting cells within and below canopy, ignoring above. 
+13. vFRcanopy - ratio of filled to empty voxels, only counting cells within and below canopy, ignoring above.
+
 14. vzrumple - vertical Rumple index.
 
 15. ClosedGapSpace - volume of voxels that are classified as gaps underneath the canopy
 
 
-
-Check correlation between predictors.
-Basal area is highly correlated (>0.8) with stem volume and stand density
+#### Check correlation between predictors. 
+Basal area is highly correlated (>0.8) with stem volume and stand density.
 ```{r}
-chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","perc.below.2m.sc","stand.dens.sc",
+chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc","stand.dens.sc",
                                 "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc", "zentropy.sc",
                                 "lad.max.sc","rumple.sc","vFRcanopy.sc","vzrumple.sc","ClosedGapSpace.sc")],
                   method = "spearman")
 ```
 
+
 ### Models by camera trap location
 
 #### Species richness model
 
-Fitting global model then using {dredge} to find models of best fit. 
+Fitting global model then using {dredge} to find models of best fit.
 
 Top model summary output
+
 ```{r}
 #fitting global model for use in dredge
 rm1 <- glm(n.all ~  
@@ -507,6 +517,7 @@ plotcoef(top_rich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Ric
 ```
 
 averaged model output - averaging top models (delta AIC values < 2)
+
 ```{r}
 #averaging models with dAIC<2 - this works but I don't know how to plot coefficients
 rich_models_avg <- model.avg(rich_models, subset = "delta" < 2)
@@ -515,7 +526,6 @@ summary(rich_models_avg)
 
 plot(rich_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
-
 
 #### Species diversity model
 
@@ -565,7 +575,6 @@ summary(shan_models_avg)
 plot(shan_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
 ```
 
-
 #### Species evenness model
 
 Top model summary output
@@ -603,6 +612,7 @@ plotcoef(top_even_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Eve
 ```
 
 averaged model output - averaging top models (delta AIC values < 2)
+
 ```{r}
 #averaging models with dAIC<2
 even_models_avg <- model.avg(even_models, subset = "delta" < 2)
@@ -612,7 +622,8 @@ summary(even_models_avg)
 plot(even_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
 
-comparing coefficient plot from the three top models 
+comparing coefficient plot from the three top models
+
 ```{r}
 multiplot(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], intercept = FALSE, 
           decreasing = TRUE, names = c("richness","diversity","evenness")) + 
@@ -623,7 +634,8 @@ multiplot(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], interce
                             #"gap vol.","max. tree h","veg. vol.","vert. rumple")))
 ```
 
-summary table comparing the three top models 
+summary table comparing the three top models
+
 ```{r}
 tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transform = NULL,
           dv.labels = c("Species Richness","Shannon Diversity","Species Evenness")
@@ -633,6 +645,7 @@ tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transfo
 
 
 ### Models by partition
+
 ```{r include=FALSE}
 #calculating mean of all scaled predictors aggregated by partition
 pt_mets <- stand_mets %>%
@@ -651,32 +664,34 @@ ct_div_mets_terr <- ct %>%
   left_join(ct_div_mets_terr)
 ```
 
-
 #### Species richness model
 
-Fitting global model then using {dredge} to find models of best fit. 
+Fitting global model then using {dredge} to find models of best fit.
 
-Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. After adjusting predictors, the top avg. model continues to show vFRcanopy (postive), lad.max (neg), and rumple (pos) as reliable predictors.
+Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. After adjusting predictors, the top avg. model continues to show vFRcanopy (postive) and rumple (pos) as reliable predictors.
 ```{r}
+#removing MO1 partition since no structure mets are from this pt
 ct_div_mets_terr <- ct_div_mets_terr[!ct_div_mets_terr$partition == "MO1",]
+```
 
+```{r}
 #fitting global model for use in dredge
-rm_pt1 <- glm(n.terr ~  
+rm_pt1 <- glm(n.terr ~ 
              max.height.sc +
-             mean.tree.h.sc +
-             CRR.rho.sc +
-             sd.r.sc +
+             #mean.tree.h.sc +
+             #CRR.rho.sc +
+             #sd.r.sc +
              #mean.dbh.sc +
-             basal.area.sc + 
+             #basal.area.sc + 
              #stand.dens.sc +
              #stem.vol.sc +
-             #pts.below.2m.sc +
-             #zentropy.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
              lad.max.sc +
              rumple.sc +
-             vFRcanopy.sc,
-             #vzrumple.sc +
-             #ClosedGapSpace.sc,
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
@@ -693,9 +708,10 @@ plotcoef(top_rich_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values < 2)
+averaged model output - averaging top models (delta AIC values \< 2)
+when I expand the dAIC values to <5 zentropy is included and is the strongest (pos) predictor
 ```{r}
-#averaging models with dAIC<2 - this works but I don't know how to plot coefficients
+#averaging models with dAIC<2
 rich_models_pt_avg <- model.avg(rich_pt_models, subset = "delta" < 2)
 
 summary(rich_models_pt_avg)
@@ -703,30 +719,30 @@ summary(rich_models_pt_avg)
 plot(rich_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Richness (partition) - Av. Mod")
 ```
 
-
 #### Species diversity model
 
-Fitting global model then using {dredge} to find models of best fit. 
+Fitting global model then using {dredge} to find models of best fit.
 
-Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. After adjusting predictors, the top avg. model continues to show vFRcanopy (postive) and rumple (pos) as reliable predictors.
+Top model summary output. After adjusting predictors, the top avg. model continues to show vFRcanopy, rumple, zentropy, and mean dbh as reliable positive predictors.
+
 ```{r}
 #global model
 sm_pt1 <- glm(Shannon ~  
              #max.height.sc +
-             mean.tree.h.sc +
-             CRR.rho.sc +
-             sd.r.sc +
+             #mean.tree.h.sc +
+             #CRR.rho.sc +
+             #sd.r.sc +
              mean.dbh.sc +
-             basal.area.sc + 
+             #basal.area.sc + 
              #stand.dens.sc +
-             #stem.vol.sc +
-             #pts.below.2m.sc +
-             #zentropy.sc +
-             #lad.max.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
              rumple.sc +
              vFRcanopy.sc +
-             #vzrumple.sc +
-             ClosedGapSpace.sc,
+             vzrumple.sc,
+             #ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
@@ -743,7 +759,8 @@ plotcoef(top_shan_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values < 2)
+averaged model output - averaging top models (delta AIC values \< 2)
+
 ```{r}
 #averaging models with dAIC<2 - this works but I don't know how to plot coefficients
 shan_models_pt_avg <- model.avg(shan_pt_models, subset = "delta" < 2)
@@ -753,30 +770,28 @@ summary(shan_models_pt_avg)
 plot(shan_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Diversity (partition) - Av. Mod")
 ```
 
-
 #### Species evenness model
 
-Fitting global model then using {dredge} to find models of best fit. 
+Top model summary output. After adjusting predictors, the top avg. model continues to show vFRcanopy, rumple, zentropy, and mean dbh as reliable positive predictors.
 
-Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. After adjusting predictors, the top avg. model continues to show vFRcanopy (postive), rumple (pos), and stem.vol (pos) as reliable predictors.
 ```{r}
 #global model
 em_pt1 <- glm(evenness ~  
              max.height.sc +
-             mean.tree.h.sc +
+             #mean.tree.h.sc +
              #CRR.rho.sc +
              #sd.r.sc +
              mean.dbh.sc +
              #basal.area.sc + 
              #stand.dens.sc +
-             stem.vol.sc +
+             #stem.vol.sc +
              pts.below.2m.sc +
-             #zentropy.sc +
-             #lad.max.sc +
+             zentropy.sc +
+             lad.max.sc +
              rumple.sc +
              vFRcanopy.sc +
-             #vzrumple.sc +
-             ClosedGapSpace.sc,
+             vzrumple.sc,
+             #ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
@@ -793,12 +808,15 @@ plotcoef(top_even_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values < 2)
+averaged model output - averaging top models (delta AIC values \< 2)
+
 ```{r}
 #averaging models with dAIC<2 - this works but I don't know how to plot coefficients
-even_models_pt_avg <- model.avg(even_pt_models, subset = "delta" < 2)
+even_models_pt_avg <- model.avg(even_pt_models, subset = "delta" < 6)
 
 summary(even_models_pt_avg)
 
 plot(even_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Evenness (partition) - Av. Mod")
 ```
+
+## MODELING - Arboreal mammals (census data)
