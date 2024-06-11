@@ -1,0 +1,771 @@
+---
+title: "Forest structure variables"
+author: "Gene Estrada"
+date: "2024-06-11"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(PerformanceAnalytics)
+library(cowplot)
+
+#select stand metrics
+stand_mets <- read.csv(file = "data/select.stand.mets.csv", header = TRUE)
+
+#ordering habitat by elevation
+stand_mets$habitat <- factor(stand_mets$habitat, 
+                                       levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
+                                                "Lowland Sandstone", "Lowland Granite", 
+                                                "Upland Granite", "Montane"),
+                                       ordered = TRUE)
+
+stand_mets$partition <- factor(stand_mets$partition, 
+                                       levels = c("PS1", "FS1", "AB1", "AB2",
+                                                "LS1", "LS2", "LG1", "LG2",
+                                                "UG1", "UG2", "MO1", "MO2"),
+                                       ordered = TRUE)
+#all tree metrics
+tree_mets <- read.csv(file = "all.tree.mets.csv", header = TRUE)
+
+#ordering habitat by elevation
+tree_mets$habitat <- factor(tree_mets$habitat, 
+                                       levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
+                                                "Lowland Sandstone", "Lowland Granite", 
+                                                "Upland Granite", "Montane"),
+                                       ordered = TRUE)
+
+tree_mets$partition <- factor(tree_mets$partition, 
+                                       levels = c("PS1", "FS1", "AB1", "AB2",
+                                                "LS1", "LS2", "LG1", "LG2",
+                                                "UG1", "UG2", "MO1", "MO2"),
+                                       ordered = TRUE)
+#all stand metrics
+all_stand_mets <- read.csv(file = "all.stand.mets.csv", header = TRUE)
+
+#changing default setting in ggplot to center plot titles
+theme_update(plot.title = element_text(hjust = 0.5))
+```
+
+## Correlations between variables
+```{r warning=FALSE}
+chart.Correlation(stand_mets[,c(5:16,21:29)], histogram = TRUE, pch = 19)
+```
+
+## On- and Off-trail scans
+by forest type
+```{r}
+table(stand_mets$habitat, stand_mets$on.off.trail)
+```
+
+## Plotting forest structure metrics by forest type
+
+### Maximum tree height
+```{r}
+#distribution
+hist(stand_mets$max.height, breaks = 25, las = 1,
+     main = "Max. Tree Heights", xlab = "tree h (m)")
+
+#summary stats
+summary(stand_mets$max.height)
+
+#max height by forest type
+plot1 <- ggplot(stand_mets, aes(habitat, max.height)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Max. Tree Height", x = "", y = "height (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  coord_flip()
+
+#by partition - big difference between LS1 and LS2
+ggplot(stand_mets, aes(partition, max.height)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Max. Tree Height", x = "", y = "height (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_flip()
+
+#by elevation
+p1 <- ggplot(stand_mets, aes(altitude, max.height)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Max. Tree Height", x = "", y = "height (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Mean tree height
+```{r}
+#distribution
+hist(stand_mets$mean.tree.h, breaks = 25, las = 1,
+     main = "Average Tree Heights", xlab = "mean tree h (m)")
+
+#summary stats
+summary(stand_mets$mean.tree.h)
+
+#by forest type
+plot2 <- ggplot(stand_mets, aes(habitat, mean.tree.h)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Avg. Tree Height", x = "", y = "mean tree h (m)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(axis.text.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, mean.tree.h)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Avg. Tree Height", x = "", y = "mean tree h (m)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p2 <- ggplot(stand_mets, aes(altitude, mean.tree.h)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Avg. Tree Height", x = "", y = "mean tree h (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Canopy relief ratio
+```{r}
+#distribution 
+hist(stand_mets$CRR.rho, breaks = 25, las = 1,
+     main = "Canopy Relief Ratio", xlab = "CRR")
+
+#summary stats
+summary(stand_mets$CRR.rho)
+
+#by forest type
+plot3 <- ggplot(stand_mets, aes(habitat, CRR.rho)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Canopy Relief Ratio", x = "", y = "CRR") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(axis.text.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+#by partition - sizable differences between all partitions except UG
+ggplot(stand_mets, aes(partition, CRR.rho)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Canopy Relief Ratio", x = "", y = "CRR") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p3 <- ggplot(stand_mets, aes(altitude, CRR.rho)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Canopy Relief Ratio", x = "", y = "CRR") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Standard deviation of tree heights
+```{r}
+#distribution 
+hist(stand_mets$sd.r, breaks = 25, las = 1,
+     main = "Std. Dev. Tree Heights", xlab = "sd tree h (m)")
+
+#summary stats
+summary(stand_mets$sd.r)
+
+#by forest type
+plot4 <- ggplot(stand_mets, aes(habitat, sd.r)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Std. Dev. Tree Heights", x = "", y = "sd tree h (m)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition - big difference between AB1 and AB2
+ggplot(stand_mets, aes(partition, sd.r)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Std. Dev. Tree Heights", x = "", y = "sd tree h (m)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p4 <- ggplot(stand_mets, aes(altitude, sd.r)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Std. Dev. Tree Heights", x = "", y = "sd tree h (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Mean DBH
+```{r}
+#distribution
+hist(stand_mets$mean.dbh, breaks = 25,
+     main = "Avg. Tree DBH", xlab = "dbh (cm)")
+
+#summary stats
+summary(stand_mets$mean.dbh)
+
+#by forest type
+plot5 <- ggplot(stand_mets, aes(habitat, mean.dbh)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Avg. Tree DBH", x = "", y = "dbh (cm)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(axis.text.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, mean.dbh)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Avg. Tree DBH", x = "", y = "dbh (cm)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p5 <- ggplot(stand_mets, aes(altitude, mean.dbh)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Avg. Tree DBH", x = "", y = "dbh (cm)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Basal area
+```{r}
+#distribution - some outliers on the upper end, pulling the mean higher
+hist(stand_mets$basal.area, breaks = 25,
+     main = "Tree Basal Area", xlab = expression(m^2/ha))
+
+#summary stats
+summary(stand_mets$basal.area)
+
+#by forest type
+plot6 <- ggplot(stand_mets, aes(habitat, basal.area)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Basal Area", x = "", y = expression(m^2/ha)) + 
+  coord_flip() + 
+  theme_classic() +
+  theme(axis.text.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, basal.area)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Basal Area", x = "", y = expression(m^2/ha)) + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p6 <- ggplot(stand_mets, aes(altitude, basal.area)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Basal Area", x = "", y = expression(m^2/ha)) + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_blank())
+```
+
+### Tree density 
+```{r}
+#distribution
+hist(stand_mets$stand.dens, breaks = 25,
+     main = "Tree Density", xlab = "trees/ha")
+
+#summary stats
+summary(stand_mets$stand.dens)
+
+#by forest type
+plot7 <- ggplot(stand_mets, aes(habitat, stand.dens)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Density", x = "", y = "trees/ha") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, stand.dens)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Density", x = "", y = "trees/ha") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p7 <- ggplot(stand_mets, aes(altitude, stand.dens)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Density", x = "elevation (m)", y = "trees/ha") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Stem volume 
+```{r}
+#distribution - outliers on upper end
+hist(stand_mets$stem.vol, breaks = 25,
+     main = "Tree Volume", xlab = expression(m^3/ha))
+
+#summary stats - mean quite a bit higher than median
+summary(stand_mets$stem.vol)
+
+#by forest type
+plot8 <- ggplot(stand_mets, aes(habitat, stem.vol)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Volume", x = "", y = expression(m^3/ha)) + 
+  coord_flip() + 
+  theme_classic() +
+  theme(axis.text.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, stem.vol)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Tree Volume", x = "", y = expression(m^3/ha)) + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p8 <- ggplot(stand_mets, aes(altitude, stem.vol)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Volume", x = "elevation (m)", y = expression(m^3/ha)) + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Number of points below 2 m
+```{r}
+#distribution - seems to be one outlier (BC 2.19)
+hist(stand_mets$pts.below.2m, breaks = 25,
+     main = "Terrestrial Vegetation", xlab = "n pts. < 2 m")
+
+#summary stats
+summary(stand_mets$pts.below.2m)
+
+#by forest type
+plot9 <- ggplot(stand_mets, aes(habitat, pts.below.2m)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Terrestrial Vegetation", x = "", y = "n pts. < 2 m") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, pts.below.2m)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Terrestrial Vegetation", x = "", y = "n pts. < 2 m") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+p9 <- ggplot(stand_mets, aes(altitude, perc.below.2m)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Terrestrial Vegetation", x = "elevation (m)", y = "% veg. < 2 m") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### zentropy
+Standardized Shannon diversity metric describing vertical complexity
+```{r}
+#distribution
+hist(stand_mets$zentropy, breaks = 25,
+     main = "Vertical Complexity", xlab = "Shannon Diversity of point heights")
+
+#summary stats
+summary(stand_mets$zentropy)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, zentropy)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Vertical Complexity", x = "", y = "entropy (z)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, zentropy)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Vertical Complexity", x = "", y = "entropy (z)") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, zentropy)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Vertical Complexity", x = "elevation (m)", y = "entropy (z)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Leaf Area Density
+maximum value of 1m vertical bin LAD
+```{r}
+#distribution
+hist(stand_mets$lad.max, breaks = 25,
+     main = "Leaf Area Density", xlab = "LAD")
+
+#summary stats
+summary(stand_mets$lad.max)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, lad.max)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Leaf Area Density", x = "", y = "LAD") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, lad.max)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Leaf Area Density", x = "", y = "LAD") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, lad.max)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Leaf Area Density", x = "elevation (m)", y = "LAD") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Rumple
+Rumple index describes canopy rugosity
+```{r}
+#distribution
+hist(stand_mets$rumple, breaks = 25, las = 1,
+     main = "Canopy Rugosity", xlab = "Rumple Index")
+
+#summary stats
+summary(stand_mets$rumple)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, rumple)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Canopy Rugosity", x = "", y = "Rumple Index") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, rumple)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Canopy Rugosity", x = "", y = "Rumple Index") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, rumple)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Canopy Rugosity", x = "elevation (m)", y = "Rumple Index") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Volumetric vegetation
+vFRcanopy metric is the ratio of 'filled' to 'all' voxels (1 cubic m)
+```{r}
+#distribution
+hist(stand_mets$vFRcanopy, breaks = 25, las = 1,
+     main = "Volumetric Vegetation", xlab = "vegetated:all voxels")
+
+#summary stats
+summary(stand_mets$vFRcanopy)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, vFRcanopy)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Volumetric Vegetation", x = "", y = "vegetated:all voxels") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, vFRcanopy)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Volumetric Vegetation", x = "", y = "vegetated:all voxels") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, vFRcanopy)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Volumetric Vegetation", x = "elevation (m)", y = "vegetated:all voxels") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Vertical rumple index
+even after controlling for elevation there doesn't seem to be much variation here. Alone, this metric mirrors elevation, so I won't be able to use this for modeling
+```{r}
+#distribution
+hist(stand_mets$vzrumple, breaks = 25, las = 1,
+     main = "Vertical Rumple", xlab = "Rumple Index")
+
+#summary stats
+summary(stand_mets$vzrumple)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, vzrumple/altitude)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Vertical Rumple", x = "", y = "Rumple Index") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, vzrumple/altitude)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Vertical Rumple", x = "", y = "Rumple Index") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, vzrumple/altitude)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Vertical Rumple", x = "elevation (m)", y = "Rumple Index") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Closed Gap Space
+```{r}
+#distribution
+hist(stand_mets$ClosedGapSpace, breaks = 25, las = 1,
+     main = "Closed Gap Space", xlab = "gap volume")
+
+#summary stats
+summary(stand_mets$ClosedGapSpace)
+
+#by forest type
+ggplot(stand_mets, aes(habitat, ClosedGapSpace)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Closed Gap Space", x = "", y = "gap volume") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by partition
+ggplot(stand_mets, aes(partition, ClosedGapSpace)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1) + 
+  labs(title = "Closed Gap Space", x = "", y = "gap volume") + 
+  coord_flip() + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#by elevation
+ggplot(stand_mets, aes(altitude, ClosedGapSpace)) + 
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Closed Gap Space", x = "elevation (m)", y = "gap volume") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### combining plots into a single grid - only for FORTLS metrics, need to update
+
+forest type plot grid
+```{r}
+plot_grid(plot1, plot2, plot3, plot4, plot5, plot6, plot7, plot8, plot9,
+          nrow = 3, rel_widths = c(.4,.3,.3))
+
+```
+
+elevation plot grid
+```{r}
+plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, p9, nrow = 3)
+```
+
+
+## All trees metrics
+
+Using metrics from individual trees from all scans. Total of 2,010 trees detected by the FORTLS functions.
+
+summary
+```{r}
+#tree heights
+t1 <- ggplot(tree_mets, aes(h)) +
+  geom_histogram(bins = 100) +
+  labs(title = "Tree Heights", x = "height (m)") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#summary stats
+summary(tree_mets$h)
+
+#tree dbh - skewed 
+t2 <- ggplot(tree_mets, aes(dbh)) +
+  geom_histogram(bins = 100) +
+  labs(title = "Tree Diameters", x = "dbh (cm)", y = "") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#summary stats
+summary(tree_mets$dbh)
+
+#tree dbh - skewed 
+t3 <- ggplot(tree_mets, aes(v)) +
+  geom_histogram(bins = 100) +
+  labs(title = "Tree Volumes", x = expression(volume~(m^3)), y = "") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0,2)
+
+#summary stats
+summary(tree_mets$v)
+
+cowplot::plot_grid(t1, t2, t3, nrow = 1)
+```
+
+
+### by forest type 
+```{r}
+#tree heights
+ggplot(tree_mets, aes(x = habitat, y = h)) +
+  geom_violin() +
+  geom_boxplot(width = 0.3) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Tree Heights", x = "", y = "height (m)") + 
+  coord_flip() + 
+  theme_classic()
+
+#tree dbh
+ggplot(tree_mets, aes(x = habitat, y = dbh)) +
+  geom_violin() +
+  geom_boxplot(width = 0.3) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Diameter at Breast Height", x = "", y = "dbh (cm)") + 
+  coord_flip() + 
+  theme_classic()
+
+#tree volume
+ggplot(tree_mets, aes(x = habitat, y = v)) +
+  geom_violin() +
+  geom_boxplot(width = 0.2) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Tree Volumes", x = "", y = expression(volume~(m^3))) + 
+  coord_flip() + 
+  theme_classic() +
+  ylim(0,1)
+```
+
+### by partition
+```{r}
+#tree heights
+ggplot(tree_mets, aes(x = partition, y = h)) +
+  geom_violin() +
+  geom_boxplot(width = 0.3) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Tree Heights", x = "", y = "height (m)") + 
+  coord_flip() + 
+  theme_classic()
+
+#tree dbh
+ggplot(tree_mets, aes(x = partition, y = dbh)) +
+  geom_violin() +
+  geom_boxplot(width = 0.3) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Diameter at Breast Height", x = "", y = "dbh (cm)") + 
+  coord_flip() + 
+  theme_classic()
+
+#tree volume
+ggplot(tree_mets, aes(x = partition, y = v)) +
+  geom_violin() +
+  geom_boxplot(width = 0.2) +
+  #geom_jitter(width = 0.1) + 
+  labs(title = "Tree Volumes", x = "", y = expression(volume~(m^3))) + 
+  coord_flip() + 
+  theme_classic() +
+  ylim(0,1)
+```
+
+
+### by elevation 
+```{r}
+#tree heights
+t1 <- ggplot(tree_mets, aes(x = altitude, y = h)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Heights", x = "elevation (m)", y = "height (m)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#tree dbh
+t2 <- ggplot(tree_mets, aes(x = altitude, y = dbh)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Diameters", x = "elevation (m)", y = "dbh (cm)") + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#tree volume
+t3 <- ggplot(tree_mets, aes(x = altitude, y = v)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  labs(title = "Tree Volumes", x = "elevation (m)", y = expression(volume~(m^3))) + 
+  theme_classic() +
+  ylim(0,2) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+cowplot::plot_grid(t1, t2, t3, nrow = 1)
+```
