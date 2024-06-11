@@ -410,9 +410,7 @@ cowplot::plot_grid(p1,p2,p3, nrow = 1)
 ```
 
 
-## MODELING
-
-### Terrestrial mammals only - from CT data
+## MODELING - Terrestrial mammals (CT data)
 ```{r}
 #scale and center numeric predictors
 stand_mets <- stand_mets %>% mutate(across(c(5:16, 21:23, 25:27, 29), scale, .names = "{.col}.sc"))
