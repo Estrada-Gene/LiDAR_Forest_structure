@@ -1215,5 +1215,5 @@ ggplot(div_tab_pt_mod_arb, aes(partition, evenness)) +
        x = "", y = "Pielou index")
 
 ##creating data tables for modeling
-#write.csv(div_tab_pt_arb, file = "data/census_arb_div_mets.csv")
+#write.csv(div_tab_pt_arb, file = "data/census_arb_div_mets.csv", row.names = FALSE)
 #write.csv(div_tab_pt_mod_arb, file = "data/census_arb_div_mets_mod.csv")

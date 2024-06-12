@@ -820,3 +820,78 @@ plot(even_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mamma
 ```
 
 ## MODELING - Arboreal mammals (census data)
+```{r}
+#read in community metrics from census data, arboreal mammals only
+lt_div_mets_arb <- read.csv(file = "data/census_arb_div_mets.csv", header = TRUE)
+lt_div_mets_arb <- lt_div_mets_arb[,-1]
+
+#fix partition names
+lt_div_mets_arb <- lt_div_mets_arb %>%
+  mutate(partition = recode(partition, 
+                           "PS.I" = "PS1", 
+                           "FS.I" = "FS1", 
+                           "AB.I" = "AB1",
+                           "AB.II" = "AB2",
+                           "LS.I" = "LS1",
+                           "LS.II" = "LS2",
+                           "LG.I" = "LG1",
+                           "LG.II" = "LG2",
+                           "UG.I" = "UG1",
+                           "UG.II" = "UG2",
+                           "MO.III" = "MO2"))
+
+#add forest structure metrics
+lt_div_mets_arb <- left_join(lt_div_mets_arb, pt_mets)
+
+#removing two montane partitions that lack structure mets
+lt_div_mets_arb <- lt_div_mets_arb[!lt_div_mets_arb$partition %in% c("MO.I", "MO.II"),]
+```
+
+#### Species richness model
+
+Fitting global model then using {dredge} to find models of best fit.
+
+Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. 
+```{r}
+#fitting global model for use in dredge
+rm_pt_arb <- glm(n.terr ~ 
+             max.height.sc +
+             #mean.tree.h.sc +
+             #CRR.rho.sc +
+             #sd.r.sc +
+             #mean.dbh.sc +
+             #basal.area.sc + 
+             #stand.dens.sc +
+             #stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(effort),
+           data = lt_div_mets_arb)
+#dredge
+rich_pt_arb_models <- dredge(rm_pt_arb)
+
+#selecting top model by AIC
+top_rich_pt_arb_model <- get.models(rich_pt_arb_models, subset = 1)
+
+summary(top_rich_pt_arb_model[[1]])
+
+plotcoef(top_rich_pt_arb_model[[1]], intercept = FALSE, title = "Arboreal Mammal Richness (partition) - Top Mod", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging top models (delta AIC values \< 2)
+```{r}
+#averaging models with dAIC<2
+rich_models_pt_arb_avg <- model.avg(rich_pt_arb_models, subset = "delta" < 2)
+
+summary(rich_models_pt_arb_avg)
+
+plot(rich_models_pt_arb_avg, full = NA, intercept = FALSE, main = "Arboreal Mammal Richness (partition) - Av. Mod")
+```
