@@ -22,6 +22,7 @@ library(fitdistrplus)
 library(MuMIn)
 library(sjPlot)
 library(factoextra)
+library(ggpubr)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -1048,15 +1049,15 @@ pca_result <- prcomp(stand_mets[,c("max.height",
                                    "CRR.rho",
                                    "pts.below.2m",
                                    "stand.dens",
-                                   #"basal.area",
+                                   "basal.area",
                                    "stem.vol",
                                    "mean.tree.h",
                                    "mean.dbh",
                                    "zentropy",
-                                   #"lad.max",
+                                   "lad.max",
                                    "rumple",
                                    "vFRcanopy",
-                                   #"vzrumple",
+                                   "vzrumple",
                                    "ClosedGapSpace")], 
                      scale. = TRUE)
 
@@ -1078,8 +1079,8 @@ fviz_eig(pca_result)
 ggplot(pca_scores, aes(x = PC1, y = PC2, color = as.factor(ForestType))) +
   geom_point(size = 3) +
   stat_ellipse(level = 0.95, aes(fill = as.factor(ForestType)), alpha = 0.2, geom = "polygon") +
-  theme_minimal() +
-  labs(color = "Forest Type", fill = "Forest Type") +
+  theme_classic() +
+  labs(color = "Forest Type", fill = "Forest Type", title = "PCA of Forest Structure Metrics") +
   guides(color = guide_legend(reverse = TRUE), fill = guide_legend(reverse = TRUE))
 ```
 
@@ -1092,3 +1093,74 @@ fviz_pca_var(pca_result,
              repel = TRUE)
 ```
 
+
+## BIVARIATE PLOTS
+
+Structure metrics X species richness
+```{r}
+stand_mets %>%
+  dplyr::select(location, n.all, shannon_ct, div_even, max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace) %>%
+  pivot_longer(cols = c(max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace), 
+               names_to = "metric", 
+               values_to = "value") %>%
+  group_by(metric) %>%
+  mutate(cor = cor(value, n.all, method = "spearman", use = "complete.obs"),
+         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
+  ggplot(aes(x = value, y = n.all)) +
+  geom_point() +
+  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
+  facet_wrap(~ metric, scales = "free_x") +
+  labs(x = "Structure Metric Value", y = "Species Richness") +
+  theme_minimal() +
+  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
+            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
+            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
+            position = position_nudge(x = -0.5, y = 0.5))
+```
+
+
+Structure metrics X Shannon diversity
+```{r}
+stand_mets %>%
+  dplyr::select(location, n.all, shannon_ct, div_even, max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace) %>%
+  pivot_longer(cols = c(max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace), 
+               names_to = "metric", 
+               values_to = "value") %>%
+  group_by(metric) %>%
+  mutate(cor = cor(value, shannon_ct, method = "spearman", use = "complete.obs"),
+         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
+  ggplot(aes(x = value, y = shannon_ct)) +
+  geom_point() +
+  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
+  facet_wrap(~ metric, scales = "free_x") +
+  labs(x = "Structure Metric Value", y = "Shannon Diversity") +
+  theme_minimal() +
+  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
+            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
+            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
+            position = position_nudge(x = -0.5, y = 0.5))
+```
+
+Structure metrics X Species Evenness
+```{r}
+stand_mets %>%
+  dplyr::select(location, n.all, shannon_ct, div_even, max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace) %>%
+  pivot_longer(cols = c(max.height, sd.r, CRR.rho, pts.below.2m, stand.dens, basal.area, stem.vol, mean.tree.h, mean.dbh, zentropy, lad.max, rumple, vFRcanopy, vzrumple, ClosedGapSpace), 
+               names_to = "metric", 
+               values_to = "value") %>%
+  group_by(metric) %>%
+  mutate(cor = cor(value, div_even, method = "spearman", use = "complete.obs"),
+         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
+  ggplot(aes(x = value, y = div_even)) +
+  geom_point() +
+  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
+  facet_wrap(~ metric, scales = "free_x") +
+  labs(x = "Structure Metric Value", y = "Species Evenness") +
+  theme_minimal() +
+  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
+            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
+            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
+            position = position_nudge(x = -0.5, y = 0.5))
+```
+
+Create table comparing correltaion coefficients for each metric (row) and each diversity metric (col)
