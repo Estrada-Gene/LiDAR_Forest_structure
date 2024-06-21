@@ -23,6 +23,7 @@ library(MuMIn)
 library(sjPlot)
 library(factoextra)
 library(ggpubr)
+library(kableExtra)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -1099,6 +1100,7 @@ fviz_pca_var(pca_result,
 ### terrestrial mammals (ct data) by ct location
 
 Structure metrics X species richness
+
 ```{r}
 #selecting only metrics of interest
 fs_mets <- c("max.height", "sd.r", "CRR.rho", "pts.below.2m", "stand.dens", "basal.area", "stem.vol", "mean.tree.h", "mean.dbh", "zentropy", "lad.max", "rumple", "vFRcanopy", "vzrumple", "ClosedGapSpace")
@@ -1125,6 +1127,7 @@ stand_mets %>%
 
 
 Structure metrics X Shannon diversity
+
 ```{r}
 stand_mets %>%
   dplyr::select(location, n.all, shannon_ct, div_even, all_of(fs_mets)) %>%
@@ -1147,6 +1150,7 @@ stand_mets %>%
 ```
 
 Structure metrics X Species Evenness
+
 ```{r}
 stand_mets %>%
   dplyr::select(location, n.all, shannon_ct, div_even, all_of(fs_mets)) %>%
@@ -1171,6 +1175,7 @@ stand_mets %>%
 ### terrestrial mammals (ct data) by partition
 
 Structure metrics X species richness
+
 ```{r}
 ct_div_mets_terr %>%
   pivot_longer(cols = c(6:24), names_to = "metric", values_to = "value") %>%
@@ -1191,6 +1196,7 @@ ct_div_mets_terr %>%
 
 
 Structure metrics X Shannon diversity
+
 ```{r}
 ct_div_mets_terr %>%
   pivot_longer(cols = c(6:24), names_to = "metric", values_to = "value") %>%
@@ -1210,6 +1216,7 @@ ct_div_mets_terr %>%
 ```
 
 Structure metrics X Species Evenness
+
 ```{r}
 ct_div_mets_terr %>%
   pivot_longer(cols = c(6:24), names_to = "metric", values_to = "value") %>%
@@ -1232,6 +1239,7 @@ ct_div_mets_terr %>%
 ### arboreal mammals (census data) by partition
 
 Structure metrics X species richness
+
 ```{r}
 lt_div_mets_arb %>%
   pivot_longer(cols = c(7:25), names_to = "metric", values_to = "value") %>%
@@ -1252,6 +1260,7 @@ lt_div_mets_arb %>%
 
 
 Structure metrics X Shannon diversity
+
 ```{r}
 lt_div_mets_arb %>%
   pivot_longer(cols = c(7:25), names_to = "metric", values_to = "value") %>%
@@ -1271,6 +1280,7 @@ lt_div_mets_arb %>%
 ```
 
 Structure metrics X Species Evenness
+
 ```{r}
 lt_div_mets_arb %>%
   pivot_longer(cols = c(7:25), names_to = "metric", values_to = "value") %>%
@@ -1287,6 +1297,126 @@ lt_div_mets_arb %>%
             aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
             hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
             position = position_nudge(x = -0.5, y = 0.5))
+```
+
+
+summary table for Pearson correlation between structure metrics and diversity metrics
+```{r}
+divmets <- c("n.all", "shannon_ct", "div_even")
+
+cor_matrix <- matrix(nrow = length(fs_mets), ncol = length(divmets))
+rownames(cor_matrix) <- fs_mets
+colnames(cor_matrix) <- divmets
+
+#calculate Pearson correlation coefficients
+for (i in 1:length(fs_mets)) {
+  for (j in 1:length(divmets)) {
+    cor_matrix[i, j] <- cor(stand_mets[[fs_mets[i]]], stand_mets[[divmets[j]]], method = "pearson")
+  }
+}
+```
+
+```{r}
+divmets <- c("n.terr", "Shannon", "evenness")
+
+cor_matrix2 <- matrix(nrow = length(fs_mets), ncol = length(divmets))
+rownames(cor_matrix2) <- paste0(fs_mets, ".sc")
+colnames(cor_matrix2) <- divmets
+
+#calculate Pearson correlation coefficients
+for (i in 1:length(fs_mets)) {
+  for (j in 1:length(divmets)) {
+    cor_matrix2[i, j] <- cor(ct_div_mets_terr[[paste0(fs_mets, ".sc")[i]]], ct_div_mets_terr[[divmets[j]]], method = "pearson")
+  }
+}
+```
+
+```{r}
+divmets <- c("richness", "shannon", "evenness")
+
+cor_matrix3 <- matrix(nrow = length(fs_mets), ncol = length(divmets))
+rownames(cor_matrix3) <- paste0(fs_mets, ".sc")
+colnames(cor_matrix3) <- divmets
+
+#calculate Pearson correlation coefficients
+for (i in 1:length(fs_mets)) {
+  for (j in 1:length(divmets)) {
+    cor_matrix3[i, j] <- cor(lt_div_mets_arb[[paste0(fs_mets, ".sc")[i]]], lt_div_mets_arb[[divmets[j]]], method = "pearson")
+  }
+}
+
+
+kbl(as.data.frame(cbind(cor_matrix, cor_matrix2, cor_matrix3)), 
+    format = "html", 
+    caption = "Pearson correlations beteen structure metrics and diversity metrics") %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  add_header_above(c(" " = 1, "Terrestrial by ct" = 3, "Terrestrial by partition" = 3, "Arboreal by partition" = 3))
+```
+
+
+## DIVERSITY COMPARISON PLOTS
+
+```{r}
+ct_div_mets_terr$type <- "terrestrial"
+lt_div_mets_arb$type <- "arboreal"
+
+ct_div_mets_terr$richness <- ct_div_mets_terr$n.terr
+ct_div_mets_terr$shannon <- ct_div_mets_terr$Shannon
+
+all_div_mets <- bind_rows(ct_div_mets_terr[,c("partition","richness","shannon","evenness","type")], 
+                          lt_div_mets_arb[,c("partition","richness","shannon","evenness","type")])
+
+long_all_div_mets <- all_div_mets %>%
+  pivot_longer(cols = c(richness, shannon, evenness), names_to = "Metric", values_to = "Value")
+
+long_all_div_mets$partition <- factor(long_all_div_mets$partition, levels = c("PS1", "FS1", "AB1", "AB2",
+                                          "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
+                    ordered = TRUE)
+```
+
+comparing three community metrics by partition - arboreal (census data) vs terrestrial (ct data) mammals
+
+```{r fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
+p1 <- long_all_div_mets %>%
+  filter(Metric == "richness") %>%
+  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
+  geom_col(position = "identity", width = 0.8) +
+  coord_flip() +
+  scale_y_continuous(labels = abs) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
+        legend.position = "none", 
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Species Richness",
+       y = "n species",
+       x = "partition")
+
+p2 <- long_all_div_mets %>%
+  filter(Metric == "shannon") %>%
+  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
+  geom_col(position = "identity", width = 0.8) +
+  coord_flip() +
+  scale_y_continuous(labels = abs) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
+        legend.position = "none", 
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Shannon Diversity",
+       y = "Shannon Diversity Index", x = "")
+
+p3 <- long_all_div_mets %>%
+  filter(Metric == "evenness") %>%
+  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
+  geom_col(position = "identity", width = 0.8) +
+  coord_flip() +
+  scale_y_continuous(labels = abs) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Species Evenness",
+       y = "evenness", x = "")
+
+cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.3, .3, .4))
 ```
 
 Create table comparing correlation coefficients for each metric (row) and each diversity metric (col)
