@@ -499,7 +499,7 @@ rm1 <- glm(n.all ~
              CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
-             #basal.area.sc + #removing due to cor - model doesn't converge when added
+             basal.area.sc + 
              stand.dens.sc +
              stem.vol.sc +
              pts.below.2m.sc +
@@ -527,14 +527,10 @@ plotcoef(top_rich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Ric
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values \< 2)
-Comparing averaged models that use all candidate models and only those with dAIC < 2
+averaged model output - averaging all models
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2 - this works but I don't know how to plot coefficients
-rich_models_avg <- model.avg(rich_models
-                             #, subset = "delta" < 2
-                             )
-
+#averaging models
+rich_models_avg <- model.avg(rich_models)
 summary(rich_models_avg)
 ```
 
@@ -542,7 +538,7 @@ summary(rich_models_avg)
 plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
 
-#### Species diversity model
+#### Shannon diversity model
 
 Top model summary output
 
@@ -568,7 +564,6 @@ shannon_model <- glm(shannon_ct ~
                         family = Gamma(link = "log"), 
                         offset = log(act.days),
                         data = stand_mets)
-
 #dredge
 shan_models <- dredge(shannon_model)
 
@@ -583,17 +578,16 @@ plotcoef(top_shan_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Div
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values \< 2)
+averaged model output - averaging all models
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
-shan_models_avg <- model.avg(shan_models, subset = "delta" < 2)
-
+#averaging models
+shan_models_avg <- model.avg(shan_models)
 summary(shan_models_avg)
 ```
 
 ```{r}
-plot(shan_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
+plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
 ```
 
 #### Species evenness model
@@ -635,17 +629,17 @@ plotcoef(top_even_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Eve
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values \< 2)
+averaged model output - averaging all models
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #averaging models with dAIC<2
-even_models_avg <- model.avg(even_models, subset = "delta" < 2)
+even_models_avg <- model.avg(even_models)
 
 summary(even_models_avg)
 ```
 
 ```{r}
-plot(even_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
+plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
 
 comparing coefficient plot from the three top models
