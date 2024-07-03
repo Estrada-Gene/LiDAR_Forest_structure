@@ -632,7 +632,7 @@ p <- p[,2:5]
 
 #creating list of trail names in main study area
 trails <- separate(p, pointfrom, into = c("trail","num"), sep = "-", remove = FALSE) %>%
-  select("trail") %>%
+  dplyr::select(trail) %>%
   unique() %>%
   pull(trail)
 
@@ -662,9 +662,9 @@ new_rows <- p %>%
 
 # Combine the new rows with the original data frame
 p <- p %>%
-  select(pointfrom, habitat, partition) %>%
+  dplyr::select(pointfrom, habitat, partition) %>%
   bind_rows(new_rows %>%
-              select(pointfrom, habitat, partition)) %>%
+  dplyr::select(pointfrom, habitat, partition)) %>%
   arrange(pointfrom)
 
 rm(new_rows)
@@ -712,7 +712,7 @@ as.data.frame(table(c$Latin_name)) %>%
 #ref: https://esajournals.onlinelibrary.wiley.com/doi/10.1890/08-1494.1
 library(traitdata)
 data(pantheria)
-terrest <- pantheria[c("Family", "Genus", "scientificNameStd","Terrestriality")]
+#terrest <- pantheria[c("Family", "Genus", "scientificNameStd","Terrestriality")]
 
 #most species have same latin name between census and pantheria data, 12 don't
 table(unique(c$Latin_name) %in% terrest$scientificNameStd)
@@ -740,6 +740,46 @@ traits <- bind_rows(traits, new_sp)
 traits[is.na(traits$Terrestriality) ,c("Species","Terrestriality")]
 
 #write.csv(traits, file = "data/mammal_list_ct_trait_202405.csv")
+
+#####
+# what about other mammal traits from PanTHERIA?
+#  Is enough info available for the GP mammals to do functional diversity estimates?
+
+sort(colSums(is.na(pantheria[pantheria$scientificNameStd %in% traits$scientificNameStd,])))
+
+pan_traits <- pantheria[pantheria$scientificNameStd %in% traits$scientificNameStd,
+          c("scientificNameStd", "AdultBodyMass_g", "DietBreadth", "TrophicLevel", 
+            "ActivityCycle", "LitterSize", "HomeRange_km2", "SocialGrpSize")]
+
+#maybe. the Gorczynski et al. paper consider 6 variables: 
+#body mass, diet comp., sociality, substrate use, activity period, avg. litter size
+
+#based on available data (# of non-NA values in the list above) I might be able to use:
+#body mass (4 NA's), diet breadth (11), trophic level (11), activity cycle (14), litter size (17), 
+
+#I think some notable variables that would be important which are missing are: group size, HR size
+#maybe for group size I can use ct and census data and compute average # of individuals
+
+#there is an R package that collates mammal home ranges into one database: {homeranges}
+#https://github.com/SHoeks/HomeRange
+
+#remotes::install_github("SHoeks/HomeRange", subdir='pkg')
+library(HomeRange)
+
+HomeRangeData <- GetHomeRangeData()
+
+table(pan_traits$scientificNameStd %in% HomeRangeData$Species)
+table(traits$Species %in% HomeRangeData$Species)
+
+pan_traits$scientificNameStd %in% HomeRangeData$Species
+pan_traits$scientificNameStd[pan_traits$scientificNameStd %in% HomeRangeData$Species]
+
+traits$Species %in% HomeRangeData$Species
+traits$Specie[traits$Specie %in% HomeRangeData$Species]
+
+#there is also Elton Traits db that contains mammal dietary data (% carn, %fruit, %seed, etc.)
+#https://figshare.com/collections/EltonTraits_1_0_Species-level_foraging_attributes_of_the_world_s_birds_and_mammals/3306933
+
 ############################################################################################################
 
 

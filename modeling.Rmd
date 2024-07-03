@@ -69,7 +69,7 @@ tree_mets$habitat <- factor(tree_mets$habitat, levels = c("Peat Swamp", "Freshwa
 tree_mets$partition <- factor(tree_mets$partition, levels = c("PS1", "FS1", "AB1", "AB2",
                                                                 "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
                                ordered = TRUE)
-#camera trap data
+#camera trap metadata
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
 ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
 
@@ -528,16 +528,18 @@ plotcoef(top_rich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Ric
 ```
 
 averaged model output - averaging top models (delta AIC values \< 2)
-
+Comparing averaged models that use all candidate models and only those with dAIC < 2
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #averaging models with dAIC<2 - this works but I don't know how to plot coefficients
-rich_models_avg <- model.avg(rich_models, subset = "delta" < 2)
+rich_models_avg <- model.avg(rich_models
+                             #, subset = "delta" < 2
+                             )
 
 summary(rich_models_avg)
 ```
 
 ```{r}
-plot(rich_models_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
+plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
 
 #### Species diversity model
@@ -691,7 +693,7 @@ ct_div_mets_terr <- ct %>%
 
 Fitting global model then using {dredge} to find models of best fit.
 
-Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. After cycling through which predictors are included (maybe not the best way to go about this?) the top averaged model continues to show vFRcanopy (postive) and rumple (pos) as reliable predictors.
+Top model summary output. Restricting models to two predictors to avoid overfitting
 
 ```{r}
 #removing MO1 partition since no structure mets are from this pt
@@ -702,13 +704,13 @@ ct_div_mets_terr <- ct_div_mets_terr[!ct_div_mets_terr$partition == "MO1",]
 #fitting global model for use in dredge
 rm_pt1 <- glm(n.terr ~ 
              max.height.sc +
-             #mean.tree.h.sc +
-             #CRR.rho.sc +
-             #sd.r.sc +
-             #mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
-             #stem.vol.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
@@ -720,8 +722,9 @@ rm_pt1 <- glm(n.terr ~
            family = Gamma(link = "log"), 
            offset = log(effort),
            data = ct_div_mets_terr)
+
 #dredge
-rich_pt_models <- dredge(rm_pt1)
+rich_pt_models <- dredge(rm_pt1, m.max = 2)
 
 #selecting top model by AIC
 top_rich_pt_model <- get.models(rich_pt_models, subset = 1)
@@ -738,45 +741,45 @@ averaged model output - averaging top models (delta AIC values \< 2) when I expa
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #averaging models with dAIC<2
-rich_models_pt_avg <- model.avg(rich_pt_models, subset = "delta" < 6)
+rich_models_pt_avg <- model.avg(rich_pt_models)
 
 summary(rich_models_pt_avg)
 ```
 
 ```{r}
-plot(rich_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Richness (partition) - Av. Mod")
+plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness (partition) - Av. Mod")
 ```
 
 #### Species diversity model
 
 Fitting global model then using {dredge} to find models of best fit.
 
-Top model summary output. After adjusting predictors, the top avg. model continues to show vFRcanopy, rumple, zentropy, and mean dbh as reliable positive predictors.
+Top model summary output.
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 sm_pt1 <- glm(Shannon ~  
-             #max.height.sc +
-             #mean.tree.h.sc +
-             #CRR.rho.sc +
-             #sd.r.sc +
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
              mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
+             basal.area.sc + 
+             stand.dens.sc +
              stem.vol.sc +
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
              rumple.sc +
              vFRcanopy.sc +
-             vzrumple.sc,
-             #ClosedGapSpace.sc,
+             vzrumple.sc +
+             ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1)
+shan_pt_models <- dredge(sm_pt1, m.max = 2)
 
 #selecting top model by AIC
 top_shan_pt_model <- get.models(shan_pt_models, subset = 1)
@@ -792,14 +795,13 @@ plotcoef(top_shan_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
 averaged model output - averaging top models (delta AIC values \< 2)
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2 - this works but I don't know how to plot coefficients
-shan_models_pt_avg <- model.avg(shan_pt_models, subset = "delta" < 6)
-
+#averaging models
+shan_models_pt_avg <- model.avg(shan_pt_models)
 summary(shan_models_pt_avg)
 ```
 
 ```{r}
-plot(shan_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Diversity (partition) - Av. Mod")
+plot(shan_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity (partition) - Av. Mod")
 ```
 
 #### Species evenness model
@@ -810,26 +812,26 @@ Top model summary output. After adjusting predictors, the top avg. model continu
 #global model
 em_pt1 <- glm(evenness ~  
              max.height.sc +
-             #mean.tree.h.sc +
-             #CRR.rho.sc +
-             #sd.r.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
              mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
-             #stem.vol.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
              rumple.sc +
              vFRcanopy.sc +
-             vzrumple.sc,
-             #ClosedGapSpace.sc,
+             vzrumple.sc +
+             ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-even_pt_models <- dredge(em_pt1)
+even_pt_models <- dredge(em_pt1, m.max = 2)
 
 #selecting top model by AIC
 top_even_pt_model <- get.models(even_pt_models, subset = 1)
@@ -845,14 +847,15 @@ plotcoef(top_even_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
 averaged model output - averaging top models (delta AIC values \< 2)
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2 - this works but I don't know how to plot coefficients
-even_models_pt_avg <- model.avg(even_pt_models, subset = "delta" < 6)
+#averaging models 
+even_models_pt_avg <- model.avg(even_pt_models)
 
 summary(even_models_pt_avg)
 ```
 
 ```{r}
-plot(even_models_pt_avg, full = NA, intercept = FALSE, main = "Terrestrial Mammal Evenness (partition) - Av. Mod")
+plot(even_models_pt_avg, full = FALSE, intercept = FALSE, 
+     main = "Terrestrial Mammal Evenness (partition) - Av. Mod")
 ```
 
 ## MODELING - Arboreal mammals (census data)
