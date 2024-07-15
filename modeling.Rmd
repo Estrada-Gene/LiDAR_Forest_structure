@@ -24,6 +24,7 @@ library(sjPlot)
 library(factoextra)
 library(ggpubr)
 library(kableExtra)
+library(FD)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -90,6 +91,9 @@ stand_mets <- left_join(stand_mets, ct_active_days, by = "locationID")
 #adding PanTheria terrestriality data
 traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
 m <- left_join(m, traits[,c("Species","Terrestriality")], by = "Species")
+
+#read terrestrial mammal traits data
+terr_traits <- read.csv(file = "data/mammal_traits_terr.csv", header = TRUE)
 ```
 
 # I. Camera Trap Data
@@ -325,6 +329,44 @@ stand_mets <- left_join(stand_mets, div_mets[,c("locationID","n.all","shannon_ct
                         by = "locationID")
 stand_mets$div_even <- as.numeric(stand_mets$div_even)
 ```
+
+
+## FUNCTIONAL DIVERSITY METRICS
+
+### By camera trap location
+
+```{r}
+#creating observation table
+obs_table <- m %>%
+  filter(Species %in% terr_traits$Species) %>%
+  filter(!Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
+                         "Unid civet", "Unid Rat", "Muntiacus spp.")) %>%
+  group_by(locationID, Species) %>%
+  summarise(n.ind = sum(Number.of.Animals)) %>%
+  pivot_wider(names_from = Species, values_from = n.ind) %>%
+  left_join(., ct_active_days) %>%
+  mutate(across(-0, ~ . / act.days))
+
+species_columns <- sort(setdiff(names(obs_table), c("locationID", "act.days")))
+obs_table <- obs_table %>% dplyr::select(locationID, all_of(species_columns))
+obs_table <- as.data.frame(obs_table)
+
+rownames(obs_table) <- obs_table$locationID
+obs_table <- obs_table[,-1]
+
+#adjusting traits table
+terr_traits_trim <- terr_traits[!terr_traits$Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
+                                             "Unid civet", "Unid Rat", "Muntiacus spp."),
+                               -c(2,8,9)]
+
+rownames(terr_traits_trim) <- terr_traits_trim$Species
+terr_traits_trim <- terr_traits_trim[,-1]
+
+fd_metrics <- dbFD(terr_traits_trim, obs_table)
+fd_metrics
+```
+
+
 
 ## COMMUNITY METRICS VISUALIZATION
 

@@ -1329,4 +1329,11 @@ f <- left_join(f, s[,c("New_Singkat", "Latin_name")], join_by("Row.Labels" == "N
 #so I won't be able to use this data to create a dietary breadth variable
 table(traits$Species %in% f$Latin_name)
 
-#need to fill out dietary breadth column for the missing species
+#saving traits table
+#write.csv(traits, file = "data/mammal_traits_terr.csv", row.names = FALSE)
+
+###################################################################################################
+## estimating functional diversity metrics
+install.packages("FD")
+library(FD)
+
