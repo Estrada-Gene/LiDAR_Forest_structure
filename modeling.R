@@ -711,18 +711,21 @@ as.data.frame(table(c$Latin_name)) %>%
 #loading pantheria dataset (Jones et al. 2009)
 #ref: https://esajournals.onlinelibrary.wiley.com/doi/10.1890/08-1494.1
 library(traitdata)
+library(tidyverse)
+
 data(pantheria)
 #terrest <- pantheria[c("Family", "Genus", "scientificNameStd","Terrestriality")]
 
 #most species have same latin name between census and pantheria data, 12 don't
 table(unique(c$Latin_name) %in% terrest$scientificNameStd)
 
-
 #reading in existing trait data from Leech lab paper - species are from ct observations
-traits <- read.csv(file = "data/mammal_list_ct_trait_202403.csv", header = TRUE)
+traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
 traits$Terrestriality <- as.integer(traits$Terrestriality)
 colnames(traits)[4] <- "scientificNameStd"
 
+###############################################
+#for species not in the CT data (census observations)
 #10 species from the census data are not in the ct data
 table(unique(c$Latin_name) %in% traits$Species)
 
@@ -736,23 +739,13 @@ new_sp <- left_join(new_sp, pantheria[,c("Family","Genus", "scientificNameStd", 
 
 traits <- bind_rows(traits, new_sp)
 
-#still missing some terrestriality data for species, will have to fill it in on my own
-traits[is.na(traits$Terrestriality) ,c("Species","Terrestriality")]
-
-#write.csv(traits, file = "data/mammal_list_ct_trait_202405.csv")
-
-#####
+#################################################
 # what about other mammal traits from PanTHERIA?
-#  Is enough info available for the GP mammals to do functional diversity estimates?
-
-sort(colSums(is.na(pantheria[pantheria$scientificNameStd %in% traits$scientificNameStd,])))
-
-pan_traits <- pantheria[pantheria$scientificNameStd %in% traits$scientificNameStd,
-          c("scientificNameStd", "AdultBodyMass_g", "DietBreadth", "TrophicLevel", 
-            "ActivityCycle", "LitterSize", "HomeRange_km2", "SocialGrpSize")]
-
+#is enough info available for the GP mammals to do functional diversity estimates?
 #maybe. the Gorczynski et al. paper consider 6 variables: 
 #body mass, diet comp., sociality, substrate use, activity period, avg. litter size
+
+sort(colSums(is.na(pantheria[pantheria$scientificNameStd %in% traits$scientificNameStd,])))
 
 #based on available data (# of non-NA values in the list above) I might be able to use:
 #body mass (4 NA's), diet breadth (11), trophic level (11), activity cycle (14), litter size (17), 
@@ -760,22 +753,66 @@ pan_traits <- pantheria[pantheria$scientificNameStd %in% traits$scientificNameSt
 #I think some notable variables that would be important which are missing are: group size, HR size
 #maybe for group size I can use ct and census data and compute average # of individuals
 
+#using 'traits' table that Marsya compiled for leech paper to make trait table for ct mammals, FD analyses
+table(unique(m$Species) %in% traits$Species)
+
+traits_pruned <- traits[traits$Species %in% unique(m$Species),]
+
+#adding the extra pantheria, removing C.notatus duplicate with all NA values and C.familiaris
+traits_pruned <- left_join(traits_pruned, pantheria[pantheria$scientificNameStd %in% traits_pruned$scientificNameStd,
+                            c("scientificNameStd", "DietBreadth", "LitterSize", "HomeRange_km2")])
+
+traits_pruned <- traits_pruned[-c(4,41),]
+
 #there is an R package that collates mammal home ranges into one database: {homeranges}
 #https://github.com/SHoeks/HomeRange
 
-#remotes::install_github("SHoeks/HomeRange", subdir='pkg')
+remotes::install_github("SHoeks/HomeRange", subdir='pkg')
 library(HomeRange)
 
 HomeRangeData <- GetHomeRangeData()
 
-table(pan_traits$scientificNameStd %in% HomeRangeData$Species)
-table(traits$Species %in% HomeRangeData$Species)
+table(traits_pruned$scientificNameStd %in% HomeRangeData$Species)
+traits_pruned$scientificNameStd[traits_pruned$scientificNameStd %in% HomeRangeData$Species]
 
-pan_traits$scientificNameStd %in% HomeRangeData$Species
-pan_traits$scientificNameStd[pan_traits$scientificNameStd %in% HomeRangeData$Species]
+hr_selection <- HomeRangeData[HomeRangeData$Species %in% traits_pruned$scientificNameStd,]
+rm(HomeRangeData)
 
-traits$Species %in% HomeRangeData$Species
-traits$Specie[traits$Specie %in% HomeRangeData$Species]
+#there's a lot of variation in hr estimates for some species - keep this in mind
+traits_pruned <- hr_selection %>%
+  group_by(Species) %>%
+  summarise(HR.mean.km2 = mean(Home_Range_km2),
+            HR.sd.km2 = sd(Home_Range_km2)) %>%
+  left_join(traits_pruned, ., join_by(scientificNameStd == Species)) %>%
+  mutate(hr.km2 = ifelse(is.na(HomeRange_km2), HR.mean.km2, HomeRange_km2))
+
+#using max 'number of animals' average might work well as max group size
+#need to look closer at the outliers for M.nem, T.napu, 
+m %>%
+  group_by(Species) %>%
+  summarise(max.ind = max(Number.of.Animals, na.rm = TRUE),
+            sd.ind = sd(Number.of.Animals, na.rm = TRUE)) %>%
+  arrange(desc(max.n.ind)) %>%
+  print(n = 59)
+
+#looking at just the variables of interest and how many NA values are in each, just for terrestrial mammals
+traits_pruned_terr <- traits_pruned[traits_pruned$Terrestriality == 1 & !is.na(traits_pruned$Terrestriality),
+              c("Species", "Terrestriality", "ActivityCycle", "AdultBodyMass_g",
+                "TrophicLevel", "DietBreadth", "LitterSize", "hr.km2")]
+
+colSums(is.na(traits_pruned_terr[,c("ActivityCycle", "AdultBodyMass_g", "TrophicLevel", 
+                                    "DietBreadth", "LitterSize", "hr.km2")]))
+
+#how many observations of the mammals not identified to species are there?
+m %>%
+  filter(Species %in% c("Herpestes sp.", "Muntiacus spp.", "Soricidae",
+                        "Tragulus spp.", "Unid civet", "Unid Rat", "Tupaia sp.")) %>%
+  group_by(Species) %>%
+  summarise(total.obs = n())
+
+#writing table to csv to fill out missing data
+write.csv(traits_pruned_terr, file = "mammal_traits_terr.csv")
+
 
 #there is also Elton Traits db that contains mammal dietary data (% carn, %fruit, %seed, etc.)
 #https://figshare.com/collections/EltonTraits_1_0_Species-level_foraging_attributes_of_the_world_s_birds_and_mammals/3306933
@@ -1257,3 +1294,39 @@ ggplot(div_tab_pt_mod_arb, aes(partition, evenness)) +
 ##creating data tables for modeling
 #write.csv(div_tab_pt_arb, file = "data/census_arb_div_mets.csv", row.names = FALSE)
 #write.csv(div_tab_pt_mod_arb, file = "data/census_arb_div_mets_mod.csv")
+
+#######################################################################################################
+## reading in traits data with filled in values
+
+traits <- read.csv(file = "data/mammal_traits_terr.csv", header = TRUE)
+
+m <- read.csv(file = "data/pruned.csv", header = TRUE)
+m <- m[,-1]
+
+#creating max group size variable based on number of individuals in observations
+traits <- m %>%
+  group_by(Species) %>%
+  summarise(max.ind = max(Number.of.Animals, na.rm = TRUE),
+            #sd.ind = sd(Number.of.Animals, na.rm = TRUE)
+            ) %>%
+  arrange(desc(max.ind)) %>%
+  left_join(traits, ., by = "Species")
+
+#adjusting values for T. napu and H. derbyanus since the max ind values seem to be outliers
+table(m$Number.of.Animals[m$Species == "Tragulus napu"])
+table(m$Number.of.Animals[m$Species == "Hemigalus derbyanus"])
+
+traits$max.ind[traits$Species == "Tragulus napu"] <- 2
+traits$max.ind[traits$Species == "Hemigalus derbyanus"] <- 2
+
+#importing feeding observation count data and singkat index file
+f <- read.csv(file = "data/nitemsxnobs.csv", header = TRUE)
+s <- read.csv(file = "data/vert_singkat-2021-04-08.csv", header = TRUE)
+
+f <- left_join(f, s[,c("New_Singkat", "Latin_name")], join_by("Row.Labels" == "New_Singkat"))
+
+#it looks like many species in the trait list don't have feeding observation data
+#so I won't be able to use this data to create a dietary breadth variable
+table(traits$Species %in% f$Latin_name)
+
+#need to fill out dietary breadth column for the missing species

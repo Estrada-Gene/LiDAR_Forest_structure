@@ -78,7 +78,7 @@ ct2 <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
 ct_active_days <- ct2 %>%
   dplyr::select(Deployment.Location.ID, Camera.Deployment.Begin.Date, Camera.Deployment.End.Date) %>%
   mutate(Camera.Deployment.Begin.Date = as.Date(Camera.Deployment.Begin.Date),
-         Camera.Deployment.End.Date   = as.Date(Camera.Deployment.End.Date)) %>%
+         Camera.Deployment.End.Date = as.Date(Camera.Deployment.End.Date)) %>%
   mutate(act.per = as.numeric(difftime(Camera.Deployment.End.Date, 
                                        Camera.Deployment.Begin.Date, units = "days"))) %>%
   group_by(Deployment.Location.ID) %>%
