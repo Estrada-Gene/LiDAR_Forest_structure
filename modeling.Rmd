@@ -347,23 +347,105 @@ obs_table <- m %>%
   left_join(., ct_active_days) %>%
   mutate(across(-0, ~ . / act.days))
 
+#placing columns in alphabetical order
 species_columns <- sort(setdiff(names(obs_table), c("locationID", "act.days")))
 obs_table <- obs_table %>% dplyr::select(locationID, all_of(species_columns))
 obs_table <- as.data.frame(obs_table)
 
+#setting locations as row names
 rownames(obs_table) <- obs_table$locationID
 obs_table <- obs_table[,-1]
+
 
 #adjusting traits table
 terr_traits_trim <- terr_traits[!terr_traits$Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
                                              "Unid civet", "Unid Rat", "Muntiacus spp."),
                                -c(2,8,9)]
 
+#setting species as row names
 rownames(terr_traits_trim) <- terr_traits_trim$Species
 terr_traits_trim <- terr_traits_trim[,-1]
 
+#estimating functional diversity metrics
 fd_metrics <- dbFD(terr_traits_trim, obs_table)
-fd_metrics
+
+#fd metrics not calculated for CT locations with < 3 species (n = 14)
+#table(is.na(fd_metrics$FRic))
+
+#subset of metrics of interest
+fd_metrics_df <- data.frame(
+  locationID = as.integer(rownames(as.data.frame(fd_metrics$FRic))), 
+  FRich = fd_metrics$FRic, 
+  FEven = fd_metrics$FEve, 
+  FDiver = fd_metrics$FDiv, 
+  stringsAsFactors = FALSE)
+
+#add to metrics table
+stand_mets <- left_join(stand_mets, fd_metrics_df, by = "locationID")
+
+#three locations are missing FD metric data, all are off-trail locations, 2 LS2 and 1 LG
+#stand_mets[is.na(stand_mets$FRich),]
+```
+
+
+### By partition
+
+```{r}
+#creating observation table by partition
+obs_table_pt <- m %>%
+  filter(Species %in% terr_traits$Species) %>%
+  filter(!Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
+                         "Unid civet", "Unid Rat", "Muntiacus spp.")) %>%
+  group_by(partition, Species) %>%
+  summarise(n.ind = sum(Number.of.Animals)) %>%
+  pivot_wider(names_from = Species, values_from = n.ind)
+
+#adding survey effort (n ct days)
+ct_active_days <- left_join(ct_active_days, ct[,c("locationID", "habitat", "partition")])
+
+obs_table_pt <- ct_active_days %>%
+  group_by(partition) %>%
+  summarise(act.days = sum(act.days)) %>%
+  left_join(obs_table_pt, ., by = "partition")
+
+#standardizing by survey effort and assigning partition to row names
+obs_table_pt <- obs_table_pt %>% mutate(across(-0, ~ . / act.days))
+
+obs_table_pt <- as.data.frame(obs_table_pt)
+rownames(obs_table_pt) <- obs_table_pt$partition
+obs_table_pt <- obs_table_pt[,-c(1, 35)]
+
+#placing column names in alphabetical order
+obs_table_pt <- obs_table_pt[, order(names(obs_table_pt))]
+
+#calculating FD mets by partition
+fd_metrics_pt <- dbFD(terr_traits_trim, obs_table_pt)
+
+#subset of metrics of interest
+fd_metrics_pt_df <- data.frame(
+  partition = rownames(as.data.frame(fd_metrics_pt$FRic)), 
+  FRich = fd_metrics_pt$FRic, 
+  FEven = fd_metrics_pt$FEve, 
+  FDiver = fd_metrics_pt$FDiv, 
+  stringsAsFactors = FALSE)
+
+#add to metrics table
+ct_div_mets_terr <- left_join(ct_div_mets_terr, fd_metrics_pt_df, by = "partition")
+```
+
+
+How do the traditional community metrics compare to the functional diversity metrics?
+
+By camera trap location
+```{r}
+chart.Correlation(stand_mets[,c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")],
+                  method = "pearson")
+```
+
+By partition
+```{r}
+chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")],
+                  method = "spearman")
 ```
 
 
@@ -684,6 +766,160 @@ summary(even_models_avg)
 plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
 
+#### Functional richness model
+
+Top model summary output
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+stand_mets_FD <- stand_mets[!is.na(stand_mets$FRich),]
+
+frich_model <- glm(FRich ~ 
+                max.height.sc +
+                mean.tree.h.sc +
+                CRR.rho.sc +
+                sd.r.sc +
+                mean.dbh.sc +
+                basal.area.sc +
+                stand.dens.sc +
+                stem.vol.sc +
+                pts.below.2m.sc +
+                zentropy.sc +
+                lad.max.sc +
+                rumple.sc +
+                vFRcanopy.sc +
+                vzrumple.sc +
+                ClosedGapSpace.sc,
+                na.action = na.fail,
+              family = Gamma(link = "log"), 
+              #offset = log(act.days),
+              data = stand_mets_FD)
+#dredge
+frich_models <- dredge(frich_model)
+
+#selecting top model by AIC
+top_frich_model <- get.models(frich_models, subset = 1)
+
+summary(top_frich_model[[1]])
+```
+
+```{r}
+plotcoef(top_frich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Functional Richness - Top Model", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+frich_models_avg <- model.avg(frich_models)
+summary(frich_models_avg)
+```
+
+```{r}
+plot(frich_models_avg, full = FALSE, intercept = FALSE, main = "Functional Richness - Avg. Model")
+```
+
+#### Functional evenness model
+
+Top model summary output
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+feven_model <- glm(FEven ~ 
+                max.height.sc +
+                mean.tree.h.sc +
+                CRR.rho.sc +
+                sd.r.sc +
+                mean.dbh.sc +
+                basal.area.sc +
+                stand.dens.sc +
+                stem.vol.sc +
+                pts.below.2m.sc +
+                zentropy.sc +
+                lad.max.sc +
+                rumple.sc +
+                vFRcanopy.sc +
+                vzrumple.sc +
+                ClosedGapSpace.sc,
+                na.action = na.fail,
+              family = Gamma(link = "log"), 
+              #offset = log(act.days),
+              data = stand_mets_FD)
+#dredge
+feven_models <- dredge(feven_model)
+
+#selecting top model by AIC
+top_feven_model <- get.models(feven_models, subset = 1)
+
+summary(top_feven_model[[1]])
+```
+
+```{r}
+plotcoef(top_feven_model[[1]], intercept = FALSE, title = "Functional Evenness - Top Model", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+feven_models_avg <- model.avg(feven_models)
+summary(feven_models_avg)
+```
+
+```{r}
+plot(feven_models_avg, full = FALSE, intercept = FALSE, main = "Functional Evenness - Avg. Model")
+```
+
+
+#### Functional divergence model
+
+Top model summary output
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fdiver_model <- glm(FDiver ~ 
+                max.height.sc +
+                mean.tree.h.sc +
+                CRR.rho.sc +
+                sd.r.sc +
+                mean.dbh.sc +
+                basal.area.sc +
+                stand.dens.sc +
+                stem.vol.sc +
+                pts.below.2m.sc +
+                zentropy.sc +
+                lad.max.sc +
+                rumple.sc +
+                vFRcanopy.sc +
+                vzrumple.sc +
+                ClosedGapSpace.sc,
+                na.action = na.fail,
+              family = Gamma(link = "log"), 
+              #offset = log(act.days),
+              data = stand_mets_FD)
+#dredge
+fdiver_models <- dredge(fdiver_model)
+
+#selecting top model by AIC
+top_fdiver_model <- get.models(fdiver_models, subset = 1)
+
+summary(top_fdiver_model[[1]])
+```
+
+```{r}
+plotcoef(top_fdiver_model[[1]], intercept = FALSE, title = "Functional Divergence - Top Model", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fdiver_models_avg <- model.avg(fdiver_models)
+summary(fdiver_models_avg)
+```
+
+```{r}
+plot(fdiver_models_avg, full = FALSE, intercept = FALSE, main = "Functional Divergence - Avg. Model")
+```
+
+
 comparing coefficient plot from the three top models
 
 ```{r}
@@ -712,7 +948,7 @@ tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transfo
 pt_mets <- stand_mets %>%
   group_by(partition) %>%
   dplyr::select(ends_with(".sc")) %>%
-  summarize(across(where(is.numeric), mean, na.rm = TRUE))  # I could add the StdDev of variables of interest too
+  summarize(across(where(is.numeric), mean, na.rm = TRUE))  # I could add the StdDev of variables too
 
 ct_div_mets_terr <- left_join(ct_div_mets_terr, pt_mets)
 
@@ -773,12 +1009,10 @@ plotcoef(top_rich_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values \< 2) when I expand the dAIC values to \<5 zentropy is included and is the strongest (pos) predictor
+averaged model output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
 rich_models_pt_avg <- model.avg(rich_pt_models)
-
 summary(rich_models_pt_avg)
 ```
 
@@ -787,8 +1021,6 @@ plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Ma
 ```
 
 #### Species diversity model
-
-Fitting global model then using {dredge} to find models of best fit.
 
 Top model summary output.
 
@@ -842,7 +1074,7 @@ plot(shan_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Ma
 
 #### Species evenness model
 
-Top model summary output. After adjusting predictors, the top avg. model continues to show vFRcanopy, rumple, zentropy, and mean dbh as reliable positive predictors.
+Top model summary output.
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
@@ -880,12 +1112,10 @@ plotcoef(top_even_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal 
   theme_classic()
 ```
 
-averaged model output - averaging top models (delta AIC values \< 2)
+averaged model output - averaging all models
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models 
 even_models_pt_avg <- model.avg(even_pt_models)
-
 summary(even_models_pt_avg)
 ```
 
@@ -893,6 +1123,166 @@ summary(even_models_pt_avg)
 plot(even_models_pt_avg, full = FALSE, intercept = FALSE, 
      main = "Terrestrial Mammal Evenness (partition) - Av. Mod")
 ```
+
+
+#### Functional richness model
+
+Top model summary output.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
+frich_pt <- glm(FRich ~  
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(effort),
+           data = ct_div_mets_terr)
+#dredge
+frich_pt_models <- dredge(frich_pt, m.max = 2)
+
+#selecting top model by AIC
+top_frich_pt_model <- get.models(frich_pt_models, subset = 1)
+
+summary(top_frich_pt_model[[1]])
+```
+
+```{r}
+plotcoef(top_frich_pt_model[[1]], intercept = FALSE, title = "Functional Richness (partition) - Top Mod", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+frich_pt_models_avg <- model.avg(frich_pt_models)
+summary(frich_pt_models_avg)
+```
+
+```{r}
+plot(frich_pt_models_avg, full = FALSE, intercept = FALSE, 
+     main = "Functional Richness (partition) - Av. Mod")
+```
+
+
+#### Functional evenness model
+
+Top model summary output.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
+feven_pt <- glm(FEven ~  
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(effort),
+           data = ct_div_mets_terr)
+#dredge
+feven_pt_models <- dredge(feven_pt, m.max = 2)
+
+#selecting top model by AIC
+top_feven_pt_model <- get.models(feven_pt_models, subset = 1)
+
+summary(top_feven_pt_model[[1]])
+```
+
+```{r}
+plotcoef(top_feven_pt_model[[1]], intercept = FALSE, title = "Functional Evenness (partition) - Top Mod", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+feven_pt_models_avg <- model.avg(feven_pt_models)
+summary(feven_pt_models_avg)
+```
+
+```{r}
+plot(feven_pt_models_avg, full = FALSE, intercept = FALSE, 
+     main = "Functional Evenness (partition) - Av. Mod")
+```
+
+
+#### Functional divergence model
+
+Top model summary output.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
+fdiver_pt <- glm(FDiver ~  
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(effort),
+           data = ct_div_mets_terr)
+#dredge
+fdiver_pt_models <- dredge(fdiver_pt, m.max = 2)
+
+#selecting top model by AIC
+top_fdiver_pt_model <- get.models(fdiver_pt_models, subset = 1)
+
+summary(top_fdiver_pt_model[[1]])
+```
+
+```{r}
+plotcoef(top_fdiver_pt_model[[1]], intercept = FALSE, title = "Functional Divergence (partition) - Top Mod", ylab = "") +
+  theme_classic()
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fdiver_pt_models_avg <- model.avg(fdiver_pt_models)
+summary(fdiver_pt_models_avg)
+```
+
+```{r}
+plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE, 
+     main = "Functional Divergence (partition) - Av. Mod")
+```
+
 
 ## MODELING - Arboreal mammals (census data)
 

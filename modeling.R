@@ -1332,8 +1332,3 @@ table(traits$Species %in% f$Latin_name)
 #saving traits table
 #write.csv(traits, file = "data/mammal_traits_terr.csv", row.names = FALSE)
 
-###################################################################################################
-## estimating functional diversity metrics
-install.packages("FD")
-library(FD)
-
