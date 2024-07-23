@@ -102,21 +102,27 @@ terr_traits <- read.csv(file = "data/mammal_traits_terr.csv", header = TRUE)
 
 ### Entire Study Area
 
-Excluding arboreal mammals. all camera trap locations: 40 total species.
+Excluding arboreal mammals, dogs, and taxa not identified to species level (Muntiacus spp., Tragulus spp. and Unid civets). All camera trap locations: 36 total species.
 
 ```{r}
+#list of taxa not ID'd to species level, to exclude from some analyses
+unid_taxa <- c("Canis familiaris", "Muntiacus spp.", "Tragulus spp.", "Unid civet")
+
 #all camera trap locations
 m %>%
-  filter(Terrestriality == 1) %>%
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(SpeciesRichness = n_distinct(Species))
 ```
 
-Compared to only CT locations that have LiDAR data: 38 total species
+Compared to only CT locations that have LiDAR data: 34 total species
 
 ```{r}
 #only camera trap locations that have LiDAR scan data
 m %>%
-  filter(locationID %in% stand_mets$locationID & Terrestriality == 1) %>%
+  filter(locationID %in% stand_mets$locationID & 
+           Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(SpeciesRichness = n_distinct(Species))
 ```
 
@@ -128,7 +134,8 @@ Excluding arboreal mammals
 #all ct locations
 n_by_ft <- m %>%
   group_by(habitat) %>%
-  filter(Terrestriality == 1) %>%
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(habitat))
 
@@ -136,7 +143,8 @@ n_by_ft <- m %>%
 n_by_ft <- m %>%
   filter(locationID %in% stand_mets$locationID) %>%
   group_by(habitat) %>%
-  filter(Terrestriality == 1) %>%
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(n.scanned = n_distinct(Species)) %>%
   left_join(n_by_ft) %>%
   arrange(desc(habitat))
@@ -155,7 +163,8 @@ Excluding unid animals
 #all ct locations
 n_by_pt <- m %>%
   group_by(partition) %>%
-  filter(Terrestriality == 1) %>%
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(partition))
 
@@ -163,7 +172,8 @@ n_by_pt <- m %>%
 n_by_pt <- m %>%
   filter(locationID %in% stand_mets$locationID) %>%
   group_by(partition) %>%
-  filter(Terrestriality == 1) %>%
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa) %>%
   summarise(n.scanned = n_distinct(Species)) %>%
   left_join(n_by_pt) %>%
   arrange(desc(partition))
@@ -177,10 +187,10 @@ n_by_pt
 Again, but for terrestrial mammals only
 
 ```{r}
-#filtering - unsure if these spp. obs are potentially unique species or not, removing for now
+#filtering
 m_filtered <- m %>%
-  filter(!Species %in% c("Muntiacus spp.", "Tragulus spp.")) %>% 
-  filter(Terrestriality == 1)
+  filter(Terrestriality == 1 &
+         !Species %in% unid_taxa)
 
 #by all partitions
 ct_div_mets_terr <- m_filtered %>%
@@ -188,12 +198,12 @@ ct_div_mets_terr <- m_filtered %>%
   summarise(n.terr = n_distinct(Species)) %>%
   arrange(desc(partition))
 
-#by aggregated montane partition - combining MO1 and MO2 into one 'partition'
-ct_div_mets_terr_mod <- m_filtered %>%
-  mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition))) %>%
-  group_by(partition) %>%
-  summarise(n.terr = n_distinct(Species)) %>%
-  arrange(desc(partition))
+#by aggregated montane partition - combining MO1 and MO2 into one 'partition"
+#ct_div_mets_terr_mod <- m_filtered %>%
+ # mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition))) %>%
+  #group_by(partition) %>%
+  #summarise(n.terr = n_distinct(Species)) %>%
+  #arrange(desc(partition))
 ```
 
 ### By camera trap location
@@ -212,7 +222,7 @@ hist(n_by_ct$n.all, breaks = 25,
      main = "species richness - all ct locations", xlab = "n species")
 summary(n_by_ct$n.all)
 
-hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 25,
+hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 20,
      main = "species richness - scanned ct locations only", xlab = "n species")
 summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 ```
@@ -242,11 +252,13 @@ summary(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID])
 Comparing Shannon diversity aggregated at partition for all ct locations to only locations with LiDAR data
 
 ```{r}
-shannon_all <- diversity(table(m$partition, m$Species), index = "shannon")
+shannon_all <- diversity(table(m_filtered$partition, m_filtered$Species), index = "shannon")
 shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "partition")
 
-shannon_scan <- diversity(table(m$partition[shannon_ct$locationID %in% stand_mets$locationID], 
-                                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
+shannon_scan <- diversity(table(m_filtered$partition[shannon_ct$locationID %in% stand_mets$locationID], 
+                                m_filtered$Species[shannon_ct$locationID %in% stand_mets$locationID]), 
+                          index = "shannon")
+
 shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "partition")
 shannon_pt <- left_join(shannon_all, shannon_scan)
 rm(shannon_scan, shannon_all)
@@ -268,25 +280,27 @@ ct_div_mets_terr <- left_join(ct_div_mets_terr, shan_terr, by = "partition")
 rm(shan_terr)
 
 #aggregated montane
-m_filtered_agg <- m_filtered %>%
-  mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition)))
+#m_filtered_agg <- m_filtered %>%
+ # mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition)))
 
-shan_terr <- as.data.frame(diversity(table(m_filtered_agg$partition, m_filtered_agg$Species)))
-colnames(shan_terr)[1] <- "Shannon"
-shan_terr <- rownames_to_column(shan_terr, var = "partition")
-ct_div_mets_terr_mod <- left_join(ct_div_mets_terr_mod, shan_terr, by = "partition")
-rm(shan_terr)
+#shan_terr <- as.data.frame(diversity(table(m_filtered_agg$partition, m_filtered_agg$Species)))
+#colnames(shan_terr)[1] <- "Shannon"
+#shan_terr <- rownames_to_column(shan_terr, var = "partition")
+#ct_div_mets_terr_mod <- left_join(ct_div_mets_terr_mod, shan_terr, by = "partition")
+#rm(shan_terr)
 ```
 
 ### By forest type
 
 ```{r}
 #calculating shannon diversity index for all and scanned CT locations
-shannon_all <- diversity(table(m$habitat, m$Species), index = "shannon")
+shannon_all <- diversity(table(m_filtered$habitat, m_filtered$Species), index = "shannon")
 shannon_all <- rownames_to_column(as.data.frame(shannon_all), var = "habitat")
 
-shannon_scan <- diversity(table(m$habitat[shannon_ct$locationID %in% stand_mets$locationID], 
-                m$Species[shannon_ct$locationID %in% stand_mets$locationID]), index = "shannon")
+shannon_scan <- diversity(table(m_filtered$habitat[shannon_ct$locationID %in% stand_mets$locationID],
+                                m_filtered$Species[shannon_ct$locationID %in% stand_mets$locationID]), 
+                          index = "shannon")
+
 shannon_scan <- rownames_to_column(as.data.frame(shannon_scan), var = "habitat")
 shannon_ft <- left_join(shannon_all, shannon_scan)
 rm(shannon_scan, shannon_all)
@@ -319,7 +333,8 @@ Pielou's diversity measure of species evenness
 ```{r}
 ct_div_mets_terr$evenness <- ct_div_mets_terr$Shannon / log(ct_div_mets_terr$n.terr)
 
-ct_div_mets_terr_mod$evenness <- ct_div_mets_terr_mod$Shannon / log(ct_div_mets_terr_mod$n.terr)
+#not running for now since I don't need this modified montane partition 
+#ct_div_mets_terr_mod$evenness <- ct_div_mets_terr_mod$Shannon / log(ct_div_mets_terr_mod$n.terr)
 ```
 
 adding diversity metrics to forest structure metrics df
@@ -339,8 +354,7 @@ stand_mets$div_even <- as.numeric(stand_mets$div_even)
 #creating observation table
 obs_table <- m %>%
   filter(Species %in% terr_traits$Species) %>%
-  filter(!Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
-                         "Unid civet", "Unid Rat", "Muntiacus spp.")) %>%
+  filter(!Species %in% c("Tragulus spp.","Unid civet","Unid Rat","Muntiacus spp.")) %>%
   group_by(locationID, Species) %>%
   summarise(n.ind = sum(Number.of.Animals)) %>%
   pivot_wider(names_from = Species, values_from = n.ind) %>%
@@ -356,20 +370,24 @@ obs_table <- as.data.frame(obs_table)
 rownames(obs_table) <- obs_table$locationID
 obs_table <- obs_table[,-1]
 
-
 #adjusting traits table
-terr_traits_trim <- terr_traits[!terr_traits$Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
-                                             "Unid civet", "Unid Rat", "Muntiacus spp."),
+terr_traits_trim <- terr_traits[!terr_traits$Species %in% 
+                                  c("Tragulus spp.","Unid civet",
+                                    "Unid Rat","Muntiacus spp."),
                                -c(2,8,9)]
 
 #setting species as row names
 rownames(terr_traits_trim) <- terr_traits_trim$Species
 terr_traits_trim <- terr_traits_trim[,-1]
 
+#setting categorical vars as factors
+terr_traits_trim$ActivityCycle <- as.factor(terr_traits_trim$ActivityCycle)
+terr_traits_trim$TrophicLevel <- as.factor(terr_traits_trim$TrophicLevel)
+
 #estimating functional diversity metrics
 fd_metrics <- dbFD(terr_traits_trim, obs_table)
 
-#fd metrics not calculated for CT locations with < 3 species (n = 14)
+#fd metrics not calculated for CT locations with < 3 species (n = 12/172)
 #table(is.na(fd_metrics$FRic))
 
 #subset of metrics of interest
@@ -383,7 +401,7 @@ fd_metrics_df <- data.frame(
 #add to metrics table
 stand_mets <- left_join(stand_mets, fd_metrics_df, by = "locationID")
 
-#three locations are missing FD metric data, all are off-trail locations, 2 LS2 and 1 LG
+#one scanned location is missing FD metric data: TL 26 S40, LG1
 #stand_mets[is.na(stand_mets$FRich),]
 ```
 
@@ -394,8 +412,7 @@ stand_mets <- left_join(stand_mets, fd_metrics_df, by = "locationID")
 #creating observation table by partition
 obs_table_pt <- m %>%
   filter(Species %in% terr_traits$Species) %>%
-  filter(!Species %in% c("Herpestes sp.", "Soricidae", "Tragulus spp.", 
-                         "Unid civet", "Unid Rat", "Muntiacus spp.")) %>%
+  filter(!Species %in% c("Tragulus spp.","Unid civet","Unid Rat","Muntiacus spp.")) %>%
   group_by(partition, Species) %>%
   summarise(n.ind = sum(Number.of.Animals)) %>%
   pivot_wider(names_from = Species, values_from = n.ind)
@@ -413,7 +430,7 @@ obs_table_pt <- obs_table_pt %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_pt <- as.data.frame(obs_table_pt)
 rownames(obs_table_pt) <- obs_table_pt$partition
-obs_table_pt <- obs_table_pt[,-c(1, 35)]
+obs_table_pt <- obs_table_pt[,-c(1, 37)]
 
 #placing column names in alphabetical order
 obs_table_pt <- obs_table_pt[, order(names(obs_table_pt))]
@@ -434,15 +451,15 @@ ct_div_mets_terr <- left_join(ct_div_mets_terr, fd_metrics_pt_df, by = "partitio
 ```
 
 
-How do the traditional community metrics compare to the functional diversity metrics?
+#### Correlation between community metrics
 
-By camera trap location
+By camera trap location:
 ```{r}
 chart.Correlation(stand_mets[,c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")],
-                  method = "pearson")
+                  method = "spearman")
 ```
 
-By partition
+By partition:
 ```{r}
 chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")],
                   method = "spearman")
@@ -451,8 +468,6 @@ chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", 
 
 
 ## COMMUNITY METRICS VISUALIZATION
-
-#### For terrestrial mammals only
 
 ```{r, include=FALSE}
 #add habitat data to diversity metrics table
@@ -470,11 +485,11 @@ div_mets_viz$dataset <- "all"
 div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
 ```
 
-### All diversity metrics by CT location/forest type
+### Community metrics by CT location/forest type
 
 ```{r fig.height=4, fig.width=10}
 #plotting richness by all and scanned locations in same plot 
-p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
+cmp1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
   scale_fill_manual(values = c("cornflowerblue","coral3")) +
@@ -484,7 +499,7 @@ p1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
 
 #plotting diversity by all and scanned locations in same plot 
-p2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
+cmp2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
   scale_fill_manual(values = c("cornflowerblue","coral3")) +
@@ -495,7 +510,7 @@ p2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
         plot.title = element_text(hjust = 0.5))
 
 #plotting evenness by all and scanned locations in same plot 
-p3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
+cmp3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
   geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
   geom_jitter(position = position_dodge(width = 0.75)) +
   scale_fill_manual(values = c("cornflowerblue","coral3")) +
@@ -506,10 +521,49 @@ p3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
   theme(legend.position = "none", axis.text.y = element_blank(), 
         plot.title = element_text(hjust = 0.5))
 
-cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
+#cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
 ```
 
-### All diversity metrics by elevation
+
+```{r fig.height=8, fig.width=10}
+#add forest type/partition and elevation data to FD mets table
+fd_metrics_df <- left_join(fd_metrics_df, ct[,c("locationID","habitat","partition")], by = "locationID")
+fd_metrics_df$habitat <- factor(fd_metrics_df$habitat, 
+                                levels = c("Peat Swamp","Freshwater Swamp","Alluvial Bench",
+                                           "Lowland Sandstone", "Lowland Granite", "Upland Granite",
+                                           "Montane"), ordered = TRUE)
+fd_metrics_df <- left_join(fd_metrics_df, ct_elev[,c("locationID","altitude")])
+
+fdp1 <- ggplot(fd_metrics_df, aes(x = habitat, y = FRich)) +
+  geom_boxplot() +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  theme_classic() +
+  labs(title = "Functional Richness", x = "", y = "F Rich") +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+fdp2 <- ggplot(fd_metrics_df, aes(x = habitat, y = FEven)) +
+  geom_boxplot() +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  theme_classic() +
+  labs(title = "Functional Evenness", x = "", y = "F Even") +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5),
+         axis.text.y = element_blank())
+
+fdp3 <- ggplot(fd_metrics_df, aes(x = habitat, y = FDiver)) +
+  geom_boxplot() +
+  geom_jitter(position = position_dodge(width = 0.75)) +
+  theme_classic() +
+  labs(title = "Functional Divergence", x = "", y = "F Diverg") +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5),
+         axis.text.y = element_blank())
+
+cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2, nrow = 2, rel_widths = c(.4, .3, .3))
+```
+
+### Community metrics by elevation
 
 ```{r fig.height=4, fig.width=10}
 #species richness by elevation - 'all CT locations' and "scanned locations' in the same plot
@@ -548,8 +602,31 @@ p3 <- ggplot(div_mets, aes(x = altitude, y = div_even)) +
   theme(legend.position = c(.6, .2), plot.title = element_text(hjust = 0.5)) + 
   labs(title = "Species Evenness", x = "elevation (m)", y = "Species Evenness Index")
 
-cowplot::plot_grid(p1,p2,p3, nrow = 1)
+#functional richness
+p4 <- ggplot(fd_metrics_df, aes(x = altitude, y = FRich)) +
+  geom_point() +
+  geom_smooth() +  
+  theme_classic() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Functional Richness", x = "elevation (m)", y = "F Ric")
+
+p5 <- ggplot(fd_metrics_df, aes(x = altitude, y = FEven)) +
+  geom_point() +
+  geom_smooth() +  
+  theme_classic() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Functional Evenness", x = "elevation (m)", y = "F Eve")
+
+p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver)) +
+  geom_point() +
+  geom_smooth() +  
+  theme_classic() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Functional Divergence", x = "elevation (m)", y = "F Diver")
+
+cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 ```
+
 
 ## MODELING - Terrestrial mammals (CT data)
 
@@ -608,12 +685,10 @@ chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.belo
 ```
 
 ### Models by camera trap location
+Fitting global model then using {dredge} to find models of best fit.
+Restricting models to five predictors to avoid overfitting. Excluding two highly correlated pairs in dredge models: basal area & stand density, and basal area & stem volume.
 
 #### Species richness model
-
-Fitting global model then using {dredge} to find models of best fit.
-
-Top model output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
@@ -638,33 +713,26 @@ rm1 <- glm(n.all ~
            offset = log(act.days),
            data = stand_mets)
 #dredge
-rich_models <- dredge(rm1)
+rich_models <- dredge(rm1, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_rich_model <- get.models(rich_models, subset = 1)
-
-summary(top_rich_model[[1]])
-```
-
-```{r}
-plotcoef(top_rich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Richness - Top Model", ylab = "") +
-  theme_classic()
+#top_rich_model <- get.models(rich_models, subset = 1)
+#summary(top_rich_model[[1]])
 ```
 
 averaged model output - averaging all models
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models
-rich_models_avg <- model.avg(rich_models)
-summary(rich_models_avg)
-```
 
 ```{r}
+#averaging models
+rich_models_avg <- model.avg(rich_models)
+#summary(rich_models_avg)
+
 plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
 
 #### Shannon diversity model
-
-Top model summary output
 
 ```{r message=FALSE, warning=FALSE}
 #species diversity as outcome variable - by CT location
@@ -689,34 +757,26 @@ shannon_model <- glm(shannon_ct ~
                         offset = log(act.days),
                         data = stand_mets)
 #dredge
-shan_models <- dredge(shannon_model)
+shan_models <- dredge(shannon_model, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_shan_model <- get.models(shan_models, subset = 1)
-
-summary(top_shan_model[[1]])
-```
-
-```{r}
-plotcoef(top_shan_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Diversity - Top Mod", ylab = "") +
-  theme_classic()
+#top_shan_model <- get.models(shan_models, subset = 1)
+#summary(top_shan_model[[1]])
 ```
 
 averaged model output - averaging all models
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
+```{r}
 #averaging models
 shan_models_avg <- model.avg(shan_models)
-summary(shan_models_avg)
-```
+#summary(shan_models_avg)
 
-```{r}
 plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
 ```
 
 #### Species evenness model
-
-Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 even_model <- glm(div_even ~ 
@@ -740,29 +800,22 @@ even_model <- glm(div_even ~
               offset = log(act.days),
               data = stand_mets)
 #dredge
-even_models <- dredge(even_model)
+even_models <- dredge(even_model, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_even_model <- get.models(even_models, subset = 1)
-
-summary(top_even_model[[1]])
-```
-
-```{r}
-plotcoef(top_even_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Evenness - Top Model", ylab = "") +
-  theme_classic()
+#top_even_model <- get.models(even_models, subset = 1)
+#summary(top_even_model[[1]])
 ```
 
 averaged model output - averaging all models
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
-even_models_avg <- model.avg(even_models)
-
-summary(even_models_avg)
-```
-
 ```{r}
+#averaging all models
+even_models_avg <- model.avg(even_models)
+#summary(even_models_avg)
+
 plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
 
@@ -791,30 +844,24 @@ frich_model <- glm(FRich ~
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
-              #offset = log(act.days),
+              offset = log(act.days),      
               data = stand_mets_FD)
 #dredge
-frich_models <- dredge(frich_model)
+frich_models <- dredge(frich_model, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_frich_model <- get.models(frich_models, subset = 1)
-
-summary(top_frich_model[[1]])
-```
-
-```{r}
-plotcoef(top_frich_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Functional Richness - Top Model", ylab = "") +
-  theme_classic()
+#top_frich_model <- get.models(frich_models, subset = 1)
+#summary(top_frich_model[[1]])
 ```
 
 averaged model output - averaging all models
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
-frich_models_avg <- model.avg(frich_models)
-summary(frich_models_avg)
-```
-
 ```{r}
+frich_models_avg <- model.avg(frich_models)
+#summary(frich_models_avg)
+
 plot(frich_models_avg, full = FALSE, intercept = FALSE, main = "Functional Richness - Avg. Model")
 ```
 
@@ -841,20 +888,16 @@ feven_model <- glm(FEven ~
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
-              #offset = log(act.days),
+              offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-feven_models <- dredge(feven_model)
+feven_models <- dredge(feven_model, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_feven_model <- get.models(feven_models, subset = 1)
-
-summary(top_feven_model[[1]])
-```
-
-```{r}
-plotcoef(top_feven_model[[1]], intercept = FALSE, title = "Functional Evenness - Top Model", ylab = "") +
-  theme_classic()
+#top_feven_model <- get.models(feven_models, subset = 1)
+#summary(top_feven_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -892,20 +935,16 @@ fdiver_model <- glm(FDiver ~
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
-              #offset = log(act.days),
+              offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-fdiver_models <- dredge(fdiver_model)
+fdiver_models <- dredge(fdiver_model, m.max = 5, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc))
 
 #selecting top model by AIC
-top_fdiver_model <- get.models(fdiver_models, subset = 1)
-
-summary(top_fdiver_model[[1]])
-```
-
-```{r}
-plotcoef(top_fdiver_model[[1]], intercept = FALSE, title = "Functional Divergence - Top Model", ylab = "") +
-  theme_classic()
+#top_fdiver_model <- get.models(fdiver_models, subset = 1)
+#summary(top_fdiver_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -920,16 +959,51 @@ plot(fdiver_models_avg, full = FALSE, intercept = FALSE, main = "Functional Dive
 ```
 
 
-comparing coefficient plot from the three top models
+#### Comparing coefficient plot from averaged models
 
 ```{r}
-multiplot(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], intercept = FALSE, 
-          decreasing = TRUE, names = c("richness","diversity","evenness")) + 
-  labs(title = "Terrestrial Mammal Community Models", subtitle = "camera trap obs.", x = "coefficient", y = "") +
+#function to extract coefficients and confidence intervals
+extract_coefs <- function(model_avg, model_name) {
+  coefs <- as.data.frame(confint(model_avg))
+  coefs$predictor <- rownames(coefs)
+  coefs$estimate <- coef(model_avg)
+  coefs$model <- model_name
+  confint50 <- confint(model_avg, level = 0.5)
+  coefs$`25 %` <- confint50[, 1]
+  coefs$`75 %` <- confint50[, 2]
+  return(coefs)
+}
+
+#extract coefficients for each averaged model
+coef_rich <- extract_coefs(rich_models_avg, "rich")
+coef_shan <- extract_coefs(shan_models_avg, "shan")
+coef_even <- extract_coefs(even_models_avg, "even")
+coef_fric <- extract_coefs(frich_models_avg, "fric")
+coef_feve <- extract_coefs(feven_models_avg, "feve")
+coef_fdiv <- extract_coefs(fdiver_models_avg, "fdiv")
+
+#combine all
+coef_df <- rbind(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+
+#select only predictors with CI's that don't overlap zero
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
+coef_df_filter <- coef_df_filter[coef_df_filter$predictor != "(Intercept)",]
+
+#plotting
+ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
   theme_classic() +
-  theme(legend.position = "bottom", legend.box = "horizontal")
-  #+ scale_y_discrete(labels = rev(c("tree dens.","leaf area dens.","vert. complexity",
-                            #"gap vol.","max. tree h","veg. vol.","vert. rumple")))
+  labs(title = "Reliable Predictors from Averaged Models",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom")
+
 ```
 
 summary table comparing the three top models
@@ -959,6 +1033,17 @@ ct_div_mets_terr <- ct %>%
   summarise(effort = sum(act.days, na.rm = TRUE)) %>%
   filter(!partition == "Kerangas") %>%
   left_join(ct_div_mets_terr)
+```
+
+#### Check correlation between predictors.
+
+Basal area is highly correlated (\>0.8) with stand density, max height and mean tree h, 
+
+```{r}
+chart.Correlation(ct_div_mets_terr[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc","stand.dens.sc",
+                                "basal.area.sc","stem.vol.sc","mean.tree.h.sc","mean.dbh.sc", "zentropy.sc",
+                                "lad.max.sc","rumple.sc","vFRcanopy.sc","vzrumple.sc","ClosedGapSpace.sc")],
+                  method = "spearman")
 ```
 
 #### Species richness model
@@ -996,20 +1081,20 @@ rm_pt1 <- glm(n.terr ~
            data = ct_div_mets_terr)
 
 #dredge
-rich_pt_models <- dredge(rm_pt1, m.max = 2)
+rich_pt_models <- dredge(rm_pt1, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
-top_rich_pt_model <- get.models(rich_pt_models, subset = 1)
-
-summary(top_rich_pt_model[[1]])
+#top_rich_pt_model <- get.models(rich_pt_models, subset = 1)
+#summary(top_rich_pt_model[[1]])
 ```
 
-```{r}
-plotcoef(top_rich_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Richness (partition) - Top Mod", ylab = "") +
-  theme_classic()
-```
-
-averaged model output
+averaged model output - averaging all models
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 rich_models_pt_avg <- model.avg(rich_pt_models)
@@ -1017,7 +1102,7 @@ summary(rich_models_pt_avg)
 ```
 
 ```{r}
-plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness (partition) - Av. Mod")
+plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (partition) - Av. Mod")
 ```
 
 #### Species diversity model
@@ -1047,20 +1132,20 @@ sm_pt1 <- glm(Shannon ~
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1, m.max = 2)
+shan_pt_models <- dredge(sm_pt1, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
-top_shan_pt_model <- get.models(shan_pt_models, subset = 1)
-
-summary(top_shan_pt_model[[1]])
+#top_shan_pt_model <- get.models(shan_pt_models, subset = 1)
+#summary(top_shan_pt_model[[1]])
 ```
 
-```{r}
-plotcoef(top_shan_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Diversity (partition) - Top Mod", ylab = "") +
-  theme_classic()
-```
-
-averaged model output - averaging top models (delta AIC values \< 2)
+averaged model output - averaging all models
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #averaging models
@@ -1069,7 +1154,7 @@ summary(shan_models_pt_avg)
 ```
 
 ```{r}
-plot(shan_models_pt_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity (partition) - Av. Mod")
+plot(shan_models_pt_avg, full = FALSE, intercept = FALSE, main = "Mammal Diversity (partition) - Av. Mod")
 ```
 
 #### Species evenness model
@@ -1099,17 +1184,17 @@ em_pt1 <- glm(evenness ~
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-even_pt_models <- dredge(em_pt1, m.max = 2)
+even_pt_models <- dredge(em_pt1, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
-top_even_pt_model <- get.models(even_pt_models, subset = 1)
-
-summary(top_even_pt_model[[1]])
-```
-
-```{r}
-plotcoef(top_even_pt_model[[1]], intercept = FALSE, title = "Terrestrial Mammal Evenness (partition) - Top Mod", ylab = "") +
-  theme_classic()
+#top_even_pt_model <- get.models(even_pt_models, subset = 1)
+#summary(top_even_pt_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -1152,17 +1237,17 @@ frich_pt <- glm(FRich ~
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-frich_pt_models <- dredge(frich_pt, m.max = 2)
+frich_pt_models <- dredge(frich_pt, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
 top_frich_pt_model <- get.models(frich_pt_models, subset = 1)
-
 summary(top_frich_pt_model[[1]])
-```
-
-```{r}
-plotcoef(top_frich_pt_model[[1]], intercept = FALSE, title = "Functional Richness (partition) - Top Mod", ylab = "") +
-  theme_classic()
 ```
 
 averaged model output - averaging all models
@@ -1205,17 +1290,17 @@ feven_pt <- glm(FEven ~
            offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-feven_pt_models <- dredge(feven_pt, m.max = 2)
+feven_pt_models <- dredge(feven_pt, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
-top_feven_pt_model <- get.models(feven_pt_models, subset = 1)
-
-summary(top_feven_pt_model[[1]])
-```
-
-```{r}
-plotcoef(top_feven_pt_model[[1]], intercept = FALSE, title = "Functional Evenness (partition) - Top Mod", ylab = "") +
-  theme_classic()
+#top_feven_pt_model <- get.models(feven_pt_models, subset = 1)
+#summary(top_feven_pt_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -1255,20 +1340,20 @@ fdiver_pt <- glm(FDiver ~
              ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
-           offset = log(effort),
+           #offset = log(effort),
            data = ct_div_mets_terr)
 #dredge
-fdiver_pt_models <- dredge(fdiver_pt, m.max = 2)
+fdiver_pt_models <- dredge(fdiver_pt, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc) && 
+                               !(rumple.sc && vzrumple.sc))
 
 #selecting top model by AIC
-top_fdiver_pt_model <- get.models(fdiver_pt_models, subset = 1)
-
-summary(top_fdiver_pt_model[[1]])
-```
-
-```{r}
-plotcoef(top_fdiver_pt_model[[1]], intercept = FALSE, title = "Functional Divergence (partition) - Top Mod", ylab = "") +
-  theme_classic()
+#top_fdiver_pt_model <- get.models(fdiver_pt_models, subset = 1)
+#summary(top_fdiver_pt_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -1281,6 +1366,12 @@ summary(fdiver_pt_models_avg)
 ```{r}
 plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE, 
      main = "Functional Divergence (partition) - Av. Mod")
+```
+
+
+#### Comparing coefficient plot from averaged models
+```{r}
+## double check the fric by partition values, since the model coefficients seem to be 
 ```
 
 
@@ -1471,7 +1562,7 @@ plot(even_models_pt_arb_avg, full = NA, intercept = FALSE, main = "Arboreal Mamm
 
 ## ORDINATION ANALYSIS
 
-Using PCA to see how scan locations group together and to identify which forest structure metrics best differentiate between forest types and partitions. I'm not exactly sure which metrics I will ultimately include. I'm still not sure about including lad.max and vertical rumple. And most of my modeling omits basal area since it's highly correlated with two other, potentially more informative metrics. 
+Using PCA to see how scan locations group together and to identify which forest structure metrics best differentiate between forest types and partitions.
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 #run PCA
 pca_result <- prcomp(stand_mets[,c("max.height",

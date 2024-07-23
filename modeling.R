@@ -1332,3 +1332,23 @@ table(traits$Species %in% f$Latin_name)
 #saving traits table
 #write.csv(traits, file = "data/mammal_traits_terr.csv", row.names = FALSE)
 
+
+m %>%
+  filter(Species %in% c("Herpestes sp.","Unid Rat","Muntiacus spp.",
+                        "Soricidae","Tragulus spp.","Unid civet")) %>%
+  group_by(Species) %>%
+  summarise(n = length(Species))
+ 
+m %>%
+  group_by(Species) %>%
+  summarise(n = length(Species)) %>%
+  arrange(desc(n))
+
+
+m %>%
+  group_by(Species) %>%
+  summarise(n.ind = mean(Number.of.Animals, na.rm = TRUE)) %>%
+  arrange(desc(n.ind)) %>%
+  print(n = 59)
+
+table(m$Number.of.Animals[m$Species == "Unid Rat"])
