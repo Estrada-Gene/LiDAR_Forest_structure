@@ -1015,14 +1015,6 @@ ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
 
 ```
 
-summary table comparing the three top models
-
-```{r}
-tab_model(top_rich_model[[1]], top_shan_model[[1]], top_even_model[[1]], transform = NULL,
-          dv.labels = c("Species Richness","Shannon Diversity","Species Evenness")
-          #, file = "table1.xls"   #export as Excel file for manuscript submission
-          )
-```
 
 ### MODELS BY PARTITION
 
@@ -1222,7 +1214,7 @@ plot(even_models_pt_avg, full = FALSE, intercept = FALSE,
 
 #### Functional richness model
 
-Top model summary output.
+The model output here seems odd. After looking at the fric values closer, there seems to be an outlier here which may be throwing off the analysis. Not sure what to do here other than not include it in the final analysis, which may be warranted based on the high correlation between the richness and fric values (0.81)
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
@@ -1381,7 +1373,7 @@ plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE,
 
 #### Comparing coefficient plot from averaged models, reliable predictors only
 
-estimates for the functional richness model don't seem to make sense, and since fric is highly correlated with richness (0.81) it makes sense to ignore this model here. Of the other models that have reliable predictors, the shannon and evenness values are also highly correlated (0.89) and both show the same sole predictor as reliable (vFRcanopy), so I also omit the evenness model output here. 
+Since fric is highly correlated with richness (0.81) it makes sense to ignore this model here. Of the other models that have reliable predictors, the shannon and evenness values are also highly correlated (0.89) and both show vFRcanopy (vegetated volume) as the sole reliable predictor, so I also omit the evenness model here. 
 
 ```{r}
 #extract coefficients for each averaged model
@@ -1422,192 +1414,6 @@ ggplot(coef_pt_df_filter[!coef_pt_df_filter$model %in% c("fric","even"),],
                               "rumple.sc" = "rumple index"))
 ```
 
-
-## MODELING - Arboreal mammals (census data)
-
-```{r}
-#read in community metrics from census data, arboreal mammals only
-lt_div_mets_arb <- read.csv(file = "data/census_arb_div_mets.csv", header = TRUE)
-lt_div_mets_arb <- lt_div_mets_arb[,-1]
-
-#fix partition names
-lt_div_mets_arb <- lt_div_mets_arb %>%
-  mutate(partition = recode(partition, 
-                           "PS.I" = "PS1", 
-                           "FS.I" = "FS1", 
-                           "AB.I" = "AB1",
-                           "AB.II" = "AB2",
-                           "LS.I" = "LS1",
-                           "LS.II" = "LS2",
-                           "LG.I" = "LG1",
-                           "LG.II" = "LG2",
-                           "UG.I" = "UG1",
-                           "UG.II" = "UG2",
-                           "MO.III" = "MO2"))
-
-#add forest structure metrics
-lt_div_mets_arb <- left_join(lt_div_mets_arb, pt_mets)
-
-#removing two montane partitions that lack structure mets
-lt_div_mets_arb <- lt_div_mets_arb[!lt_div_mets_arb$partition %in% c("MO.I", "MO.II"),]
-```
-
-
-#### Species richness model
-
-Fitting global model then using {dredge} to find models of best fit.
-
-Top model summary output. I have to adjust which predictors are included, since I can only have up to 8 predictors for a model with 11 data points in the outcome variable. No reliable predictors, but some evidence for closed gap space and pts\<2m being positive, and CRR being negative predictors. Top model (not shown) is intercept-only mod.
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
-rm_pt_arb <- glm(richness ~ 
-             #max.height.sc +
-             #mean.tree.h.sc +
-             CRR.rho.sc +
-             #sd.r.sc +
-             #mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
-             #stem.vol.sc +
-             pts.below.2m.sc +
-             zentropy.sc +
-             lad.max.sc +
-             rumple.sc +
-             vFRcanopy.sc +
-             vzrumple.sc +
-             ClosedGapSpace.sc,
-           na.action = na.fail,
-           family = Gamma(link = "log"), 
-           offset = log(effort),
-           data = lt_div_mets_arb)
-#dredge
-rich_pt_arb_models <- dredge(rm_pt_arb)
-
-#selecting top model by AIC
-top_rich_pt_arb_model <- get.models(rich_pt_arb_models, subset = 1)
-
-summary(top_rich_pt_arb_model[[1]])
-
-#plotcoef(top_rich_pt_arb_model[[1]], intercept = FALSE, title = "Arboreal Mammal Richness (partition) - Top Mod", ylab = "") + theme_classic()
-```
-
-averaged model output - averaging top models (delta AIC values \< 6)
-I've increased the dAIC to 6 since AIC values varied quite a bit - dAIC < 2 only includes two or three models in some instances
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
-rich_models_pt_arb_avg <- model.avg(rich_pt_arb_models, subset = "delta" < 6)
-
-summary(rich_models_pt_arb_avg)
-```
-
-```{r}
-plot(rich_models_pt_arb_avg, full = NA, intercept = FALSE, main = "Arboreal Mammal Richness (partition) - Av. Mod")
-```
-
-#### Species diversity model
-
-Top model summary output not shown. No reliable predictors, but the ones nearest reliability are CRR (neg), closed gap space (pos), and vFRcanopy (pos)
-
-```{r}
-#fitting global model for use in dredge
-sm_pt_arb <- glm(shannon ~ 
-             #max.height.sc +
-             mean.tree.h.sc +
-             CRR.rho.sc +
-             #sd.r.sc +
-             mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
-             stem.vol.sc +
-             #pts.below.2m.sc +
-             zentropy.sc +
-             #lad.max.sc +
-             #rumple.sc +
-             vFRcanopy.sc +
-             vzrumple.sc +
-             ClosedGapSpace.sc,
-           na.action = na.fail,
-           family = Gamma(link = "log"), 
-           offset = log(effort),
-           data = lt_div_mets_arb)
-#dredge
-shan_pt_arb_models <- dredge(sm_pt_arb)
-
-#selecting top model by AIC
-top_shan_pt_arb_model <- get.models(shan_pt_arb_models, subset = 1)
-
-summary(top_shan_pt_arb_model[[1]])
-
-#plotcoef(top_shan_pt_arb_model[[1]], intercept = FALSE, title = "Arboreal Mammal Diversity (partition) - Top Mod", ylab = "") + theme_classic()
-```
-
-averaged model output - averaging top models (delta AIC values \< 2)
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
-shan_models_pt_arb_avg <- model.avg(shan_pt_arb_models, subset = "delta" < 6)
-
-summary(shan_models_pt_arb_avg)
-```
-
-```{r}
-plot(shan_models_pt_arb_avg, full = NA, intercept = FALSE, main = "Arboreal Mammal Diversity (partition) - Av. Mod")
-```
-
-#### Species evenness model
-
-Top model summary output. CRR rho is the only var in the top model (neg), but other vars show up in the avg mod: vert rumple (neg), closed gap space (pos), and mean tree h (neg), being the closest to reliability.
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
-em_pt_arb <- glm(evenness ~ 
-             #max.height.sc +
-             mean.tree.h.sc +
-             CRR.rho.sc +
-             #sd.r.sc +
-             #mean.dbh.sc +
-             #basal.area.sc + 
-             #stand.dens.sc +
-             #stem.vol.sc +
-             #pts.below.2m.sc +
-             zentropy.sc +
-             lad.max.sc +
-             rumple.sc +
-             vFRcanopy.sc +
-             vzrumple.sc +
-             ClosedGapSpace.sc,
-           na.action = na.fail,
-           family = Gamma(link = "log"), 
-           offset = log(effort),
-           data = lt_div_mets_arb)
-#dredge
-even_pt_arb_models <- dredge(em_pt_arb)
-
-#selecting top model by AIC
-top_even_pt_arb_model <- get.models(even_pt_arb_models, subset = 1)
-
-summary(top_even_pt_arb_model[[1]])
-```
-
-```{r}
-plotcoef(top_even_pt_arb_model[[1]], intercept = FALSE, title = "Arboreal Mammal Evenness (partition) - Top Mod", ylab = "") +
-  theme_classic()
-```
-
-averaged model output - averaging top models (delta AIC values \< 2)
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-#averaging models with dAIC<2
-even_models_pt_arb_avg <- model.avg(even_pt_arb_models, subset = "delta" < 6)
-
-summary(even_models_pt_arb_avg)
-```
-
-```{r}
-plot(even_models_pt_arb_avg, full = NA, intercept = FALSE, main = "Arboreal Mammal Evenness (partition) - Av. Mod")
-```
 
 ## ORDINATION ANALYSIS
 
@@ -1875,9 +1681,9 @@ ct_div_mets_terr %>%
 ```
 
 
-
 summary table for Pearson correlation between structure metrics and diversity metrics
 ```{r}
+#creating matrix for vars at the CT scale
 divmets <- c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")
 
 cor_matrix <- matrix(nrow = length(fs_mets), ncol = length(divmets))
@@ -1887,12 +1693,12 @@ colnames(cor_matrix) <- divmets
 #calculate Pearson correlation coefficients
 for (i in 1:length(fs_mets)) {
   for (j in 1:length(divmets)) {
-    cor_matrix[i, j] <- cor(stand_mets[[fs_mets[i]]], stand_mets[[divmets[j]]], method = "pearson")
+    cor_matrix[i, j] <- cor(stand_mets[[fs_mets[i]]], stand_mets[[divmets[j]]], 
+                            method = "pearson", use = "complete.obs")
   }
 }
-```
 
-```{r}
+#creating matrix for vars at the partition scale
 divmets <- c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")
 
 cor_matrix2 <- matrix(nrow = length(fs_mets), ncol = length(divmets))
@@ -1906,76 +1712,17 @@ for (i in 1:length(fs_mets)) {
   }
 }
 
-kbl(as.data.frame(cbind(cor_matrix, cor_matrix2)), 
-    format = "html", 
+#combining matrices and changing model names for clarity
+cor_df <- as.data.frame(cbind(cor_matrix, cor_matrix2))
+colnames(cor_df) <- c("Richness", "Shannon Diversity", "Evenness", 
+                      "Func. Richness", "Func. Evenness", "Func. Divergence",
+                      "Richness", "Shannon Diversity", "Evenness", 
+                      "Func. Richness", "Func. Evenness", "Func. Divergence")
+
+#create table
+kbl(cor_df, format = "html", 
     caption = "Pearson correlations beteen structure metrics and diversity metrics") %>%
   kable_styling(bootstrap_options = "striped") %>%
-  add_header_above(c(" " = 1, "Terrestrial by ct" = 6, "Terrestrial by partition" = 6))
+  add_header_above(c(" " = 1, "Camera Trap Scale" = 6, "Partition Scale" = 6))
 ```
 
-## DIVERSITY COMPARISON PLOTS
-
-```{r}
-ct_div_mets_terr$type <- "terrestrial"
-lt_div_mets_arb$type <- "arboreal"
-
-ct_div_mets_terr$richness <- ct_div_mets_terr$n.terr
-ct_div_mets_terr$shannon <- ct_div_mets_terr$Shannon
-
-all_div_mets <- bind_rows(ct_div_mets_terr[,c("partition","richness","shannon","evenness","type")], 
-                          lt_div_mets_arb[,c("partition","richness","shannon","evenness","type")])
-
-long_all_div_mets <- all_div_mets %>%
-  pivot_longer(cols = c(richness, shannon, evenness), names_to = "Metric", values_to = "Value")
-
-long_all_div_mets$partition <- factor(long_all_div_mets$partition, levels = c("PS1", "FS1", "AB1", "AB2",
-                                          "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
-                    ordered = TRUE)
-```
-
-comparing three community metrics by partition - arboreal (census data) vs terrestrial (ct data) mammals
-
-```{r fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
-p1 <- long_all_div_mets %>%
-  filter(Metric == "richness") %>%
-  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
-  geom_col(position = "identity", width = 0.8) +
-  coord_flip() +
-  scale_y_continuous(labels = abs) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
-        legend.position = "none", 
-        plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Species Richness",
-       y = "n species",
-       x = "partition")
-
-p2 <- long_all_div_mets %>%
-  filter(Metric == "shannon") %>%
-  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
-  geom_col(position = "identity", width = 0.8) +
-  coord_flip() +
-  scale_y_continuous(labels = abs) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
-        legend.position = "none", 
-        plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Shannon Diversity",
-       y = "Shannon Diversity Index", x = "")
-
-p3 <- long_all_div_mets %>%
-  filter(Metric == "evenness") %>%
-  ggplot(aes(x = partition, y = ifelse(type == "arboreal", -Value, Value), fill = type)) +
-  geom_col(position = "identity", width = 0.8) +
-  coord_flip() +
-  scale_y_continuous(labels = abs) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 0, vjust = 0.4),
-        plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Species Evenness",
-       y = "evenness", x = "")
-
-cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.3, .3, .4))
-```
-
-Create table comparing correlation coefficients for each metric (row) and each diversity metric (col)
