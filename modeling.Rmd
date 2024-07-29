@@ -1414,6 +1414,47 @@ ggplot(coef_pt_df_filter[!coef_pt_df_filter$model %in% c("fric","even"),],
                               "rumple.sc" = "rumple index"))
 ```
 
+```{r eval=FALSE, include=FALSE}
+coefplot1 <- ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        axis.text.x = element_blank(),
+        legend.position = c(0.95, 0.5),
+        legend.justification = "right") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  scale_y_discrete(labels = c("vFRcanopy.sc" = "veg. vol.",
+                              "stand.dens.sc" = "tree density",
+                              "basal.area.sc" = "basal area")) +
+  xlim(-0.63, 0.72)
+
+
+coefplot2 <- ggplot(coef_pt_df_filter[!coef_pt_df_filter$model %in% c("fric","even"),], 
+       aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  scale_y_discrete(labels = c("vFRcanopy.sc" = "veg. vol.",
+                              "rumple.sc" = "rumple ind. ")) +
+  xlim(-0.63, 0.72)
+
+cowplot::plot_grid(coefplot1, coefplot2, nrow = 2)
+```
+
 
 ## ORDINATION ANALYSIS
 
@@ -1467,6 +1508,18 @@ fviz_pca_var(pca_result,
              col.var = "contrib",
              gradient.cols = c("grey", "forestgreen", "black"),
              repel = TRUE)
+```
+
+Table of variable PCA contribution values 
+```{r}
+get_pca_var(pca_result)$contrib %>%
+  as.data.frame() %>%
+  rowwise() %>%
+  mutate(total_contrib = sum(c_across(starts_with("Dim.1") | starts_with("Dim.2")))) %>%
+  ungroup() %>%
+  mutate(variable = rownames(get_pca_var(pca_result)$contrib)) %>%
+  dplyr::select(variable, total_contrib) %>%
+  arrange(desc(total_contrib))
 ```
 
 
