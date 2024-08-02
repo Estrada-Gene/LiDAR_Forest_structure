@@ -25,6 +25,10 @@ library(factoextra)
 library(ggpubr)
 library(kableExtra)
 library(FD)
+library(geosphere)
+library(sp)
+library(spdep)
+library(sf)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -625,6 +629,250 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver)) +
   labs(title = "Functional Divergence", x = "elevation (m)", y = "F Diver")
 
 cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
+```
+
+
+## DISTANCE x DISSIMILARITY
+
+Calculating pairwise distance for scanned locations and plotting values by pairwise similarity, with blue points showing pairs in the same forest type and red points pairs in different forest types. I included the six community metrics here as well, but it might be worthwhile to see what the linear models look like for these for the full set of camera traps, since we know that the community metrics for only the scanned sites differs from the values for all CT sites, especially in the higher elevation forest types.
+```{r}
+#pairwise distances for scanned locations
+distance_df <- as.data.frame(as.table(distm(stand_mets[,c("longitude","latitude")], fun = distHaversine)))
+colnames(distance_df) <- c("loc1", "loc2", "distance")
+distance_df$loc1 <- as.integer(distance_df$loc1)
+distance_df$loc2 <- as.integer(distance_df$loc2)
+
+#pairwise similarity for each metric
+metric_list <- c("max.height", "sd.r", "CRR.rho", "pts.below.2m", "stand.dens", "basal.area", 
+             "stem.vol", "mean.tree.h", "mean.dbh", "zentropy", "lad.max", "rumple", 
+             "vFRcanopy", "vzrumple", "ClosedGapSpace","n.all", "shannon_ct", "div_even")
+
+similarity_list <- lapply(metric_list, function(metric) {
+  metric_data <- stand_mets[[metric]]
+  similarity_matrix <- as.matrix(dist(metric_data))
+  similarity_df <- as.data.frame(as.table(similarity_matrix))
+  colnames(similarity_df) <- c("loc1", "loc2", "similarity")
+  similarity_df$metric <- metric
+  return(similarity_df)
+})
+
+similarity_df <- do.call(rbind, similarity_list)
+similarity_df$loc1 <- as.integer(similarity_df$loc1)
+similarity_df$loc2 <- as.integer(similarity_df$loc2)
+
+#combine distance and similarity data
+pairs_df <- distance_df %>%
+  left_join(similarity_df, by = c("loc1", "loc2")) %>%
+  mutate(
+    same_forest_type = stand_mets$habitat[as.integer(loc1)] == stand_mets$habitat[as.integer(loc2)],
+    same_forest_type = ifelse(same_forest_type, "same", "different"))
+
+#plot
+ggplot(pairs_df[!pairs_df$distance == 0,], 
+       aes(x = distance, y = similarity)) +
+  geom_point(aes(color = same_forest_type, shape = same_forest_type), 
+             alpha = 0.5, size = 0.75) +
+  geom_smooth(aes(group = same_forest_type, color = same_forest_type), 
+              method = "lm", se = FALSE) +
+  facet_wrap(~ metric, scales = "free_y") +
+  labs(x = "Geographic Distance (m)", y = "Structural Dissimilarity (Euclidean Distance)",
+       color = "forest type", shape = "forest type") +
+  scale_color_manual(values = c("same" = "blue", "different" = "red")) +
+  theme_minimal() +
+  theme(legend.position = c(0.8, 0.02),
+        legend.justification = c(1, 0),   
+        legend.box.just = "right")
+```
+
+Histogram of pairwise distances between scanned locations to see if there are any obvious breaks here that can guide grid size
+```{r}
+hist(distance_df$distance[distance_df$distance > 0], las = 1, 
+     main = "", xlab = "pwd (m)", breaks = 100)
+```
+
+
+## SPATIAL AUTOCORRELATION
+
+Five structure metrics show a significant level of spatial autocorrelation, including max height, vertical rumple, vegetation volume, leaf area density, and mean tree height. 
+```{r}
+#convert stand mets df to spatial object
+stand_mets_sp <- stand_mets
+coordinates(stand_mets_sp) <- ~longitude + latitude
+proj4string(stand_mets_sp) <- CRS("+proj=longlat +datum=WGS84")
+
+#calculate spatial weights
+coords <- coordinates(stand_mets_sp)
+distances <- spDists(coords, longlat = TRUE)
+max_distance <- max(distances)
+threshold <- max_distance * 0.001
+
+#define neighbors based on threshold distance
+neighbors <- dnearneigh(coords, 0, threshold)
+
+#binary weights for neighbors
+weights <- nb2listw(neighbors, style = "W")
+
+#function to calculate Moran's I and Geary's C
+calculate_morans_i <- function(variable, weights) {
+  moran_test <- moran.test(variable, weights)
+  list(Moran_I = moran_test$estimate[1],
+       Expected_I = moran_test$estimate[2],
+       Variance = moran_test$estimate[3],
+       Z_score = moran_test$statistic,
+       P_value = moran_test$p.value)
+}
+
+#calculate metrics
+spac_mets <- map_dfr(metric_list, function(col) {
+  metrics <- calculate_morans_i(stand_mets_sp[[col]], weights)
+  tibble(Metric = col,
+         Moran_I = metrics$Moran_I,
+         Expected_I = metrics$Expected_I,
+         Variance_I = metrics$Variance,
+         Z_score = metrics$Z_score,
+         P_value = metrics$P_value,
+         Significant = metrics$P_value < 0.05)
+})
+
+#again for the functional metrics because they have one less observation point
+f_metrics_list <- c("FRich", "FEven", "FDiver")
+stand_mets_func <- stand_mets[complete.cases(stand_mets[, c("FRich", "FEven", "FDiver")]),
+                              c("FRich", "FEven", "FDiver", "longitude", "latitude")]
+coordinates(stand_mets_func) <- ~longitude + latitude
+proj4string(stand_mets_func) <- CRS("+proj=longlat +datum=WGS84")
+
+coords <- coordinates(stand_mets_func)
+distances <- spDists(coords, longlat = TRUE)
+max_distance <- max(distances)
+threshold <- max_distance * 0.001
+neighbors <- dnearneigh(coords, 0, threshold)
+weights <- nb2listw(neighbors, style = "W")
+
+spac_mets2 <- map_dfr(f_metrics_list, function(col) {
+  metrics <- calculate_morans_i(stand_mets_func[[col]], weights)
+  tibble(Metric = col,
+         Moran_I = metrics$Moran_I,
+         Expected_I = metrics$Expected_I,
+         Variance_I = metrics$Variance,
+         Z_score = metrics$Z_score,
+         P_value = metrics$P_value,
+         Significant = metrics$P_value < 0.05)
+})
+
+spac_mets %>%
+  rbind(spac_mets2) %>%
+  arrange(P_value) %>%
+  print(n = Inf)
+```
+
+
+## CREATING SURVEY GRIDS
+```{r}
+#convert data to sf object
+data_sf <- st_as_sf(stand_mets, coords = c("longitude", "latitude"), crs = 4326)
+
+# Define a function to create a grid and count locations
+count_grid_cells <- function(grid_size) {
+  grid <- st_make_grid(data_sf, cellsize = grid_size, what = "polygons")
+  grid_sf <- st_sf(grid_id = seq_along(grid), geometry = grid)
+  counts <- st_intersects(grid_sf, data_sf)
+  grid_sf$count <- sapply(counts, length)
+  list(grid_sf = grid_sf, num_cells = sum(grid_sf$count > 0), grid_size = grid_size)
+}
+
+#function to find grid size
+find_grid_size <- function(initial_size, min_cells) {
+  size <- initial_size
+  result <- count_grid_cells(size)
+  
+  while (result$num_cells < min_cells) {
+    size <- size / 2
+    result <- count_grid_cells(size)
+  }
+  
+  result
+}
+```
+
+Run grid size functions
+```{r}
+initial_size <- 1  #in meters
+min_cells <- 7
+
+#find appropriate grid size
+result <- find_grid_size(initial_size, min_cells)
+final_grid <- result$grid_sf
+num_cells <- result$num_cells
+as.numeric(st_area(final_grid)[1]) #in m^2
+
+
+#plot grid
+plot(st_geometry(final_grid), col = "lightgrey", border = "white", main = "Grid with Survey Locations")
+plot(st_geometry(data_sf), add = TRUE, col = "red", pch = 19)
+
+#how many scanned locations in each grid cell
+location_grid_assignment <- st_join(data_sf, final_grid, join = st_within)
+table(location_grid_assignment$grid_id)
+length(unique(location_grid_assignment$grid_id))
+```
+
+
+```{r}
+# Drop geometry and keep only necessary columns
+location_grid_assignment %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id)
+```
+
+
+trying a different approach but doesn't work because of grid size
+```{r}
+# Convert the data to an sf object
+survey_sf <- st_as_sf(stand_mets[,c("locationID", "longitude", "latitude")], 
+                      coords = c("longitude", "latitude"), crs = 4326)
+
+# Define a bounding box for the study area
+bbox <- st_bbox(survey_sf)
+
+# Create grid systems at different scales
+grid_sizes <- c(45) 
+
+# Function to create grid and assign locations
+create_grid <- function(size, survey_sf) {
+  # Create a grid of the specified size
+  grid <- st_make_grid(survey_sf, cellsize = size, what = "polygons")
+  grid_sf <- st_sf(grid_id = 1:length(grid), geometry = grid)
+  
+  # Assign survey locations to grid cells
+  survey_grid <- st_join(survey_sf, grid_sf, join = st_within)
+  
+  # Ensure at least 10 grid cells contain survey locations
+  grid_with_data <- survey_grid %>%
+    group_by(grid_id) %>%
+    filter(!is.na(grid_id)) %>%
+    summarise(n = n()) %>%
+    ungroup()
+  
+  if(nrow(grid_with_data) < 10) {
+    stop("Grid size too large, fewer than 10 grid cells contain survey locations.")
+  }
+  
+  return(survey_grid)
+}
+
+# Apply the function to each grid size
+results <- lapply(grid_sizes, create_grid, survey_sf = survey_sf)
+
+# Extract results for a specific grid size, e.g., 50m
+result_50m <- results[[1]]  # Replace 1 with the index for the desired grid size
+
+# Output table with survey locations and assigned grid boxes
+output_table <- result_50m %>%
+  st_drop_geometry() %>%
+  select(id, grid_id)
+
+# Print the output table
+print(output_table)
 ```
 
 
