@@ -693,6 +693,28 @@ hist(distance_df$distance[distance_df$distance > 0], las = 1,
 
 ## SPATIAL AUTOCORRELATION
 
+Visualize spatial patterns of structure variables
+```{r}
+stand_mets %>%
+  dplyr::select(locationID, longitude, latitude, metric_list) %>%
+  tidyr::pivot_longer(cols = -c(locationID, longitude, latitude), 
+                      names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  mutate(norm_value = (value - min(value, na.rm = TRUE)) / (max(value, na.rm = TRUE) - min(value, na.rm = TRUE))) %>%
+  ungroup() %>%
+  ggplot(aes(x = longitude, y = latitude, color = norm_value)) +
+  geom_point(size = 3) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0.5) +
+  facet_wrap(~ variable, scales = "free") +
+  labs(x = "longitude", y = "latitude", color = "Metric Value (normalized") +
+  theme_minimal() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 10))
+```
+
+### Global Moran's I 
+
+Spatial autocorrelation across the entire study area. 
 Five structure metrics show a significant level of spatial autocorrelation, including max height, vertical rumple, vegetation volume, leaf area density, and mean tree height. 
 ```{r}
 #convert stand mets df to spatial object
@@ -734,7 +756,7 @@ spac_mets <- map_dfr(metric_list, function(col) {
          Significant = metrics$P_value < 0.05)
 })
 
-#again for the functional metrics because they have one less observation point
+#again for functional metrics because there's one less observation point, have to run separately
 f_metrics_list <- c("FRich", "FEven", "FDiver")
 stand_mets_func <- stand_mets[complete.cases(stand_mets[, c("FRich", "FEven", "FDiver")]),
                               c("FRich", "FEven", "FDiver", "longitude", "latitude")]
@@ -746,10 +768,10 @@ distances <- spDists(coords, longlat = TRUE)
 max_distance <- max(distances)
 threshold <- max_distance * 0.001
 neighbors <- dnearneigh(coords, 0, threshold)
-weights <- nb2listw(neighbors, style = "W")
+weights_pt <- nb2listw(neighbors, style = "W")
 
 spac_mets2 <- map_dfr(f_metrics_list, function(col) {
-  metrics <- calculate_morans_i(stand_mets_func[[col]], weights)
+  metrics <- calculate_morans_i(stand_mets_func[[col]], weights_pt)
   tibble(Metric = col,
          Moran_I = metrics$Moran_I,
          Expected_I = metrics$Expected_I,
@@ -764,6 +786,22 @@ spac_mets %>%
   arrange(P_value) %>%
   print(n = Inf)
 ```
+
+
+Extracting Moran's eigenvector values to use in glm to control for spatial autocorrelation
+```{r}
+#convert data to sf object
+data_sf <- st_as_sf(stand_mets, coords = c("longitude", "latitude"), crs = 4326)
+coords <- st_coordinates(data_sf)
+
+#extract Moran's eigenvectors
+mev <- meigen(coords, model = "exp", threshold = 0)
+eigenvectors <- mev$ev_full
+hist(eigenvectors, breaks = 25)
+
+stand_mets <- cbind(stand_mets, eigenvectors)
+```
+
 
 
 ## CREATING SURVEY GRIDS
@@ -825,62 +863,11 @@ location_grid_assignment %>%
 ```
 
 
-trying a different approach but doesn't work because of grid size
-```{r}
-# Convert the data to an sf object
-survey_sf <- st_as_sf(stand_mets[,c("locationID", "longitude", "latitude")], 
-                      coords = c("longitude", "latitude"), crs = 4326)
-
-# Define a bounding box for the study area
-bbox <- st_bbox(survey_sf)
-
-# Create grid systems at different scales
-grid_sizes <- c(45) 
-
-# Function to create grid and assign locations
-create_grid <- function(size, survey_sf) {
-  # Create a grid of the specified size
-  grid <- st_make_grid(survey_sf, cellsize = size, what = "polygons")
-  grid_sf <- st_sf(grid_id = 1:length(grid), geometry = grid)
-  
-  # Assign survey locations to grid cells
-  survey_grid <- st_join(survey_sf, grid_sf, join = st_within)
-  
-  # Ensure at least 10 grid cells contain survey locations
-  grid_with_data <- survey_grid %>%
-    group_by(grid_id) %>%
-    filter(!is.na(grid_id)) %>%
-    summarise(n = n()) %>%
-    ungroup()
-  
-  if(nrow(grid_with_data) < 10) {
-    stop("Grid size too large, fewer than 10 grid cells contain survey locations.")
-  }
-  
-  return(survey_grid)
-}
-
-# Apply the function to each grid size
-results <- lapply(grid_sizes, create_grid, survey_sf = survey_sf)
-
-# Extract results for a specific grid size, e.g., 50m
-result_50m <- results[[1]]  # Replace 1 with the index for the desired grid size
-
-# Output table with survey locations and assigned grid boxes
-output_table <- result_50m %>%
-  st_drop_geometry() %>%
-  select(id, grid_id)
-
-# Print the output table
-print(output_table)
-```
-
-
 ## MODELING - Terrestrial mammals (CT data)
 
 ```{r}
 #scale and center numeric predictors
-stand_mets <- stand_mets %>% mutate(across(c(5:16, 22:25, 27:29), scale, .names = "{.col}.sc"))
+stand_mets <- stand_mets %>% mutate(across(c(5:16, 22:25, 27:29, 37), scale, .names = "{.col}.sc"))
 ```
 
 #### Descriptions of forest structure metrics used in models
@@ -955,15 +942,17 @@ rm1 <- glm(n.all ~
              rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
+             eigenvectors.sc +
              ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
            data = stand_mets)
 #dredge
-rich_models <- dredge(rm1, m.max = 5, 
+rich_models <- dredge(rm1, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc))
+                               !(basal.area.sc && stem.vol.sc),
+                      fixed = "eigenvectors.sc")
 
 #selecting top model by AIC
 #top_rich_model <- get.models(rich_models, subset = 1)
@@ -999,15 +988,17 @@ shannon_model <- glm(shannon_ct ~
                          rumple.sc +
                          vFRcanopy.sc +
                          vzrumple.sc +
+                         eigenvectors.sc +
                          ClosedGapSpace.sc,
                         na.action = na.fail,
                         family = Gamma(link = "log"), 
                         offset = log(act.days),
                         data = stand_mets)
 #dredge
-shan_models <- dredge(shannon_model, m.max = 5, 
+shan_models <- dredge(shannon_model, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc))
+                               !(basal.area.sc && stem.vol.sc),
+                      fixed = "eigenvectors.sc")
 
 #selecting top model by AIC
 #top_shan_model <- get.models(shan_models, subset = 1)
@@ -1042,15 +1033,17 @@ even_model <- glm(div_even ~
                 rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
+                eigenvectors.sc +
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
               offset = log(act.days),
               data = stand_mets)
 #dredge
-even_models <- dredge(even_model, m.max = 5, 
+even_models <- dredge(even_model, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc))
+                               !(basal.area.sc && stem.vol.sc),
+                      fixed = "eigenvectors.sc")
 
 #selecting top model by AIC
 #top_even_model <- get.models(even_models, subset = 1)
@@ -1089,13 +1082,14 @@ frich_model <- glm(FRich ~
                 rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
+                #eigenvectors.sc +
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
               offset = log(act.days),      
               data = stand_mets_FD)
 #dredge
-frich_models <- dredge(frich_model, m.max = 5, 
+frich_models <- dredge(frich_model, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
@@ -1139,7 +1133,7 @@ feven_model <- glm(FEven ~
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-feven_models <- dredge(feven_model, m.max = 5, 
+feven_models <- dredge(feven_model, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
@@ -1180,15 +1174,17 @@ fdiver_model <- glm(FDiver ~
                 rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
+                eigenvectors.sc +
                 ClosedGapSpace.sc,
                 na.action = na.fail,
               family = Gamma(link = "log"), 
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-fdiver_models <- dredge(fdiver_model, m.max = 5, 
+fdiver_models <- dredge(fdiver_model, m.max = 6, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc))
+                               !(basal.area.sc && stem.vol.sc),
+                      fixed = "eigenvectors.sc")
 
 #selecting top model by AIC
 #top_fdiver_model <- get.models(fdiver_models, subset = 1)
