@@ -29,6 +29,7 @@ library(geosphere)
 library(sp)
 library(spdep)
 library(sf)
+library(spmoran)
 
 #mammal observation data - excludes all human observations
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
@@ -635,7 +636,7 @@ cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 ## DISTANCE x DISSIMILARITY
 
 Calculating pairwise distance for scanned locations and plotting values by pairwise similarity, with blue points showing pairs in the same forest type and red points pairs in different forest types. I included the six community metrics here as well, but it might be worthwhile to see what the linear models look like for these for the full set of camera traps, since we know that the community metrics for only the scanned sites differs from the values for all CT sites, especially in the higher elevation forest types.
-```{r}
+```{r fig.height=8, fig.width=10}
 #pairwise distances for scanned locations
 distance_df <- as.data.frame(as.table(distm(stand_mets[,c("longitude","latitude")], fun = distHaversine)))
 colnames(distance_df) <- c("loc1", "loc2", "distance")
@@ -693,8 +694,8 @@ hist(distance_df$distance[distance_df$distance > 0], las = 1,
 
 ## SPATIAL AUTOCORRELATION
 
-Visualize spatial patterns of structure variables
-```{r}
+Firdt I want to just visualize spatial patterns of structure variables across the study site, by camera trap location. 
+```{r fig.height=8, fig.width=10}
 stand_mets %>%
   dplyr::select(locationID, longitude, latitude, metric_list) %>%
   tidyr::pivot_longer(cols = -c(locationID, longitude, latitude), 
@@ -709,13 +710,20 @@ stand_mets %>%
   labs(x = "longitude", y = "latitude", color = "Metric Value (normalized") +
   theme_minimal() +
   theme(strip.background = element_blank(),
-        strip.text = element_text(size = 10))
+        strip.text = element_text(size = 10),
+        legend.position = c(1, 0),
+        legend.justification = c(1, 0),
+        legend.key.size = unit(0.3, "cm"),
+        legend.text = element_text(size = 8))
 ```
 
 ### Global Moran's I 
 
-Spatial autocorrelation across the entire study area. 
+A formal test of spatial autocorrelation across the entire study area. I may only be able to meaningfully test for spatial autocorrelation at this scale, and not at the grid or partition scales, as the typical low end of spatial units required for reliable statistical inference is 30.
+
 Five structure metrics show a significant level of spatial autocorrelation, including max height, vertical rumple, vegetation volume, leaf area density, and mean tree height. 
+
+Looking at the spatial patterns for these metrics in the plots above, max height, vrumple, lad, and mean height seem to show a roughly similar pattern, with low values in the swamp forests and montane, and highest values in the lowland forests in the center of the trail system - exactly what we see in the boxplots of these values plotted by forest type. Vegetation volume (vFRcanopy) shows a different spatial pattern. And rumple, along with closedgapspace show an outlier in the center of the trail system - location BC 12.4 (not sure what's going on with that one)
 ```{r}
 #convert stand mets df to spatial object
 stand_mets_sp <- stand_mets
@@ -805,7 +813,7 @@ stand_mets <- cbind(stand_mets, eigenvectors)
 
 
 ## CREATING SURVEY GRIDS
-```{r}
+```{r include=FALSE}
 #convert data to sf object
 data_sf <- st_as_sf(stand_mets, coords = c("longitude", "latitude"), crs = 4326)
 
@@ -833,9 +841,10 @@ find_grid_size <- function(initial_size, min_cells) {
 ```
 
 Run grid size functions
-```{r}
-initial_size <- 1  #in meters
-min_cells <- 7
+```{r include=FALSE}
+#for medium sized grid (~75 ha)
+initial_size <- 1 
+min_cells <- 15
 
 #find appropriate grid size
 result <- find_grid_size(initial_size, min_cells)
@@ -843,23 +852,67 @@ final_grid <- result$grid_sf
 num_cells <- result$num_cells
 as.numeric(st_area(final_grid)[1]) #in m^2
 
-
 #plot grid
-plot(st_geometry(final_grid), col = "lightgrey", border = "white", main = "Grid with Survey Locations")
-plot(st_geometry(data_sf), add = TRUE, col = "red", pch = 19)
+plot(st_geometry(final_grid), col = "white", border = "grey50", main = "Grid with Survey Locations")
+plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
 
 #how many scanned locations in each grid cell
-location_grid_assignment <- st_join(data_sf, final_grid, join = st_within)
-table(location_grid_assignment$grid_id)
-length(unique(location_grid_assignment$grid_id))
-```
+grid75 <- st_join(data_sf, final_grid, join = st_within)
+table(grid75$grid_id)
+length(unique(grid75$grid_id))
 
-
-```{r}
-# Drop geometry and keep only necessary columns
-location_grid_assignment %>%
+#add grid designations to stand mets df
+stand_mets <- grid75 %>%
   st_drop_geometry() %>%
-  dplyr::select(locationID, grid_id)
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid75 = grid_id) %>%
+  left_join(stand_mets, .)
+
+#adding grid to full CT list and then to mammal obs table (m)
+ct_sf <- st_as_sf(ct, coords = c("longitude", "latitude"), crs = 4326)
+grid75_cells <- st_join(ct_sf, final_grid, join = st_within)
+
+m_filtered <- grid75_cells %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid.75 = grid_id) %>%
+  left_join(m_filtered, .)
+
+###########################################################################################################
+#for large sized grid (~170 ha)
+initial_size <- 48 
+min_cells <- 10
+
+#find appropriate grid size
+result <- find_grid_size(initial_size, min_cells)
+final_grid <- result$grid_sf
+num_cells <- result$num_cells
+as.numeric(st_area(final_grid)[1]) #in m^2
+
+#plot grid
+plot(st_geometry(final_grid), col = "white", border = "grey50", main = "Grid with Survey Locations")
+plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
+
+#how many scanned locations in each grid cell
+grid170 <- st_join(data_sf, final_grid, join = st_within)
+table(grid170$grid_id)
+length(unique(grid170$grid_id))
+
+#add grid designations to stand mets df
+stand_mets <- grid170 %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid170 = grid_id) %>%
+  left_join(stand_mets, .)
+
+#adding grid to full CT list and then to mammal obs table (m)
+grid170_cells <- st_join(ct_sf, final_grid, join = st_within)
+
+m_filtered <- grid170_cells %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid.170 = grid_id) %>%
+  left_join(m_filtered, .)
 ```
 
 
@@ -867,7 +920,8 @@ location_grid_assignment %>%
 
 ```{r}
 #scale and center numeric predictors
-stand_mets <- stand_mets %>% mutate(across(c(5:16, 22:25, 27:29, 37), scale, .names = "{.col}.sc"))
+stand_mets <- stand_mets %>% 
+  mutate(across(c(5:16, 22:25, 27:29, 37), scale, .names = "{.col}.sc"))
 ```
 
 #### Descriptions of forest structure metrics used in models
@@ -1205,9 +1259,9 @@ plot(fdiver_models_avg, full = FALSE, intercept = FALSE, main = "Functional Dive
 
 #### Comparing coefficient plot from averaged models
 
-Plotting variables from all models that are reliable predictors only (95% CI's don't overlap zero). No reliable predictors in the Shannon Diversity or Functional Richness models. However, in the Shannon model, stand density (neg) and zentropy (pos) were near reliable (CI's only slightly overlap 0). In the F Rich model this is true for vFRcanopy only (pos), similar to the richness model output. 
+Plotting variables from models that are at least closely reliable predictors (50% CI's don't overlap zero).
 
-```{r}
+```{r fig.height=9, fig.width=6}
 #function to extract coefficients and confidence intervals
 extract_coefs <- function(model_avg, model_name) {
   coefs <- as.data.frame(confint(model_avg))
@@ -1220,7 +1274,7 @@ extract_coefs <- function(model_avg, model_name) {
   return(coefs)
 }
 
-#extract coefficients for each averaged model
+#extract coefficients from averaged models
 coef_rich <- extract_coefs(rich_models_avg, "rich")
 coef_shan <- extract_coefs(shan_models_avg, "shan")
 coef_even <- extract_coefs(even_models_avg, "even")
@@ -1235,12 +1289,14 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 #specifying order to plot models
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
-#select only predictors with CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
-coef_df_filter <- coef_df_filter[coef_df_filter$predictor != "(Intercept)",]
+#select only predictors with 50% CI's that don't overlap zero
+coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting
-ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
+#plotting - only the functional models for now
+coef_df_filter %>%
+  #filter(model %in% c("rich", "fric", "fdiv")) %>%
+ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
                 position = position_dodge(width = 0.5)) +
@@ -1256,7 +1312,832 @@ ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
   scale_y_discrete(labels = c("vFRcanopy.sc" = "veg. vol.",
                               "stand.dens.sc" = "tree dens.",
                               "basal.area.sc" = "basal area"))
+```
 
+
+### MODELS BY GRID
+
+#### 75 ha grid
+
+The 75 ha grid creates 17 groups, with most groups (grid cells) containing 2 - 4 scanned locations each. 
+```{r include=FALSE}
+#species richness
+#all CT locations
+grid75_mets <- m_filtered %>%
+  group_by(grid.75) %>%
+  summarise(n.all = n_distinct(Species))
+
+#shannon diversity
+shannon_75 <- diversity(table(m_filtered$grid.75, m_filtered$Species), index = "shannon")
+shannon_75 <- rownames_to_column(as.data.frame(shannon_75), var = "grid.75")
+shannon_75$grid.75 <- as.integer(shannon_75$grid.75)
+
+#species evenness
+grid75_mets <- shannon_75 %>%
+  left_join(., grid75_mets) %>%
+  mutate(even.75 = shannon_75/log(n.all))
+
+### functional metrics ###
+#creating observation table by partition
+obs_table_75 <- m_filtered %>%
+  filter(Species %in% terr_traits$Species) %>%
+  filter(!Species %in% c("Tragulus spp.","Unid civet","Unid Rat","Muntiacus spp.")) %>%
+  group_by(grid.75, Species) %>%
+  summarise(n.ind = sum(Number.of.Animals)) %>%
+  pivot_wider(names_from = Species, values_from = n.ind)
+
+#adding survey effort
+ct_active_days <- grid75_cells %>%
+  st_drop_geometry() %>%
+  rename(grid.75 = grid_id) %>%
+  dplyr::select(c(locationID, grid.75)) %>%
+  left_join(ct_active_days, .)
+
+obs_table_75 <- ct_active_days %>%
+  group_by(grid.75) %>%
+  summarise(act.days = sum(act.days)) %>%
+  left_join(obs_table_75, ., by = "grid.75")
+
+grid75_mets <- left_join(grid75_mets, obs_table_75[,c("grid.75", "act.days")])
+
+#standardizing by survey effort and assigning partition to row names
+obs_table_75 <- obs_table_75 %>% mutate(across(-0, ~ . / act.days))
+
+obs_table_75 <- as.data.frame(obs_table_75)
+obs_table_75 <- obs_table_75[-22,]
+rownames(obs_table_75) <- obs_table_75$grid.75
+obs_table_75 <- obs_table_75[,-c(1, 37)]
+
+#placing column names in alphabetical order
+obs_table_75 <- obs_table_75[, order(names(obs_table_75))]
+
+#calculating FD mets by partition
+fd_metrics_75 <- dbFD(terr_traits_trim, obs_table_75)
+
+#subset of metrics of interest
+fd_metrics_75_df <- data.frame(
+  grid.75 = as.numeric(rownames(as.data.frame(fd_metrics_75$FRic))), 
+  FRich = fd_metrics_75$FRic, 
+  FEven = fd_metrics_75$FEve, 
+  FDiver = fd_metrics_75$FDiv, 
+  stringsAsFactors = FALSE)
+
+#add to metrics table
+grid75_mets <- left_join(grid75_mets, fd_metrics_75_df, by = "grid.75")
+
+#### calculating mean of all scaled predictors by grid cell
+grid75_mets <- stand_mets %>%
+  group_by(grid75) %>%
+  dplyr::select(ends_with(".sc")) %>%
+  summarize(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+  rename(grid.75 = grid75) %>%
+  dplyr::select(-eigenvectors.sc) %>%
+  left_join(grid75_mets, .)
+```
+
+Correlation of community metrics. Richness is highly correlated with FRich and FDiver, and shannon is highly correlated with evenness. So probably should only keep shannon and the functional metrics. 
+```{r}
+chart.Correlation(grid75_mets[,c("n.all", "shannon_75", "even.75", "FRich", "FEven", "FDiver")],
+                  method = "spearman")
+```
+
+Correlation of structure metrics - basal area and stand dens, basal area and stem vol, %<2m and sd.r, max h and mean h, max h and vrumple, and mean h and vrumple
+```{r}
+chart.Correlation(grid75_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc",
+                                    "stand.dens.sc","basal.area.sc","stem.vol.sc","mean.tree.h.sc",
+                                    "mean.dbh.sc", "zentropy.sc","lad.max.sc","rumple.sc","vFRcanopy.sc",
+                                    "vzrumple.sc","ClosedGapSpace.sc")],
+                  method = "spearman")
+```
+
+#### Species richness model
+
+Fitting global model then using {dredge} to find models of best fit.
+
+Top model summary output. Restricting models to two predictors to avoid overfitting
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#removing MO1 partition since no structure mets are from this pt
+grid75_mets <- grid75_mets[complete.cases(grid75_mets),]
+
+#fitting global model for use in dredge
+rm_75 <- glm(n.all ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+rich_75_models <- dredge(rm_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+rich_models_75_avg <- model.avg(rich_75_models)
+summary(rich_models_75_avg)
+```
+
+```{r}
+plot(rich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (75 ha grid) - Av. Mod")
+```
+
+#### Species diversity model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+sm_75 <- glm(shannon_75 ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+shan_75_models <- dredge(sm_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+shan_models_75_avg <- model.avg(shan_75_models)
+summary(shan_models_75_avg)
+```
+
+```{r}
+plot(shan_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Diversity (75 ha grid) - Av. Mod")
+```
+
+#### Species eveness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+em_75 <- glm(even.75 ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+even_75_models <- dredge(em_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+even_models_75_avg <- model.avg(even_75_models)
+summary(even_models_75_avg)
+```
+
+```{r}
+plot(even_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Evenness (75 ha grid) - Av. Mod")
+```
+
+#### Functional richness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fr_75 <- glm(FRich ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+frich_75_models <- dredge(fr_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+frich_models_75_avg <- model.avg(frich_75_models)
+summary(frich_models_75_avg)
+```
+
+```{r}
+plot(frich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich (75 ha grid) - Av. Mod")
+```
+
+#### Functional evenness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fe_75 <- glm(FEven ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+feven_75_models <- dredge(fe_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+feven_models_75_avg <- model.avg(feven_75_models)
+summary(feven_models_75_avg)
+```
+
+```{r}
+plot(feven_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven (75 ha grid) - Av. Mod")
+```
+
+#### Functional divergence model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fd_75 <- glm(FDiver ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid75_mets)
+
+#dredge
+fdiver_75_models <- dredge(fd_75, m.max = 3, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fdiver_models_75_avg <- model.avg(fdiver_75_models)
+summary(fdiver_models_75_avg)
+```
+
+```{r}
+plot(fdiver_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FDiver (75 ha grid) - Av. Mod")
+```
+
+
+#### Comparing coefficient plots from averaged models
+
+Only for shannon diveristy and functional models, based on high degree of correlation with the other community metrics
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_rich <- extract_coefs(rich_models_75_avg, "rich")
+coef_shan <- extract_coefs(shan_models_75_avg, "shan")
+coef_even <- extract_coefs(even_models_75_avg, "even")
+coef_fric <- extract_coefs(frich_models_75_avg, "fric")
+coef_feve <- extract_coefs(feven_models_75_avg, "feve")
+coef_fdiv <- extract_coefs(fdiver_models_75_avg, "fdiv")
+
+#combine all
+coef_df <- rbind(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
+
+#select only predictors with 50% CI's that don't overlap zero
+coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+coef_df_filter %>%
+  filter(model %in% c("shan", "fric", "fdiv", "feve")) %>%
+ggplot(aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Reliable Predictors from Avg. 75ha grid Models",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE))
+```
+
+#### 170 ha grid
+
+The 170 ha grid creates 10 groups (grid cells) 
+```{r include=FALSE}
+#species richness
+#all CT locations
+grid170_mets <- m_filtered %>%
+  group_by(grid.170) %>%
+  summarise(n.all = n_distinct(Species))
+
+#shannon diversity
+shannon_170 <- diversity(table(m_filtered$grid.170, m_filtered$Species), index = "shannon")
+shannon_170 <- rownames_to_column(as.data.frame(shannon_170), var = "grid.170")
+shannon_170$grid.170 <- as.integer(shannon_170$grid.170)
+
+#species evenness
+grid170_mets <- shannon_170 %>%
+  left_join(., grid170_mets) %>%
+  mutate(even.170 = shannon_170/log(n.all))
+
+### functional metrics ###
+#creating observation table by partition
+obs_table_170 <- m_filtered %>%
+  filter(Species %in% terr_traits$Species) %>%
+  filter(!Species %in% c("Tragulus spp.","Unid civet","Unid Rat","Muntiacus spp.")) %>%
+  group_by(grid.170, Species) %>%
+  summarise(n.ind = sum(Number.of.Animals)) %>%
+  pivot_wider(names_from = Species, values_from = n.ind)
+
+#adding survey effort
+ct_active_days <- grid170_cells %>%
+  st_drop_geometry() %>%
+  rename(grid.170 = grid_id) %>%
+  dplyr::select(c(locationID, grid.170)) %>%
+  left_join(ct_active_days, .)
+
+obs_table_170 <- ct_active_days %>%
+  group_by(grid.170) %>%
+  summarise(act.days = sum(act.days)) %>%
+  left_join(obs_table_170, ., by = "grid.170")
+
+grid170_mets <- left_join(grid170_mets, obs_table_170[,c("grid.170", "act.days")])
+
+#standardizing by survey effort and assigning partition to row names
+obs_table_170 <- obs_table_170 %>% mutate(across(-0, ~ . / act.days))
+
+obs_table_170 <- as.data.frame(obs_table_170)
+obs_table_170 <- obs_table_170[-13,] #drop NA row
+rownames(obs_table_170) <- obs_table_170$grid.170
+obs_table_170 <- obs_table_170[,-c(1, 37)]
+
+#placing column names in alphabetical order
+obs_table_170 <- obs_table_170[, order(names(obs_table_170))]
+
+#calculating FD mets by partition
+fd_metrics_170 <- dbFD(terr_traits_trim, obs_table_170)
+
+#subset of metrics of interest
+fd_metrics_170_df <- data.frame(
+  grid.170 = as.numeric(rownames(as.data.frame(fd_metrics_170$FRic))), 
+  FRich = fd_metrics_170$FRic, 
+  FEven = fd_metrics_170$FEve, 
+  FDiver = fd_metrics_170$FDiv, 
+  stringsAsFactors = FALSE)
+
+#add to metrics table
+grid170_mets <- left_join(grid170_mets, fd_metrics_170_df, by = "grid.170")
+
+#### calculating mean of all scaled predictors by grid cell
+#two of the 12 cells do not have scanned locations and so will be dropped from the models below
+grid170_mets <- stand_mets %>%
+  group_by(grid170) %>%
+  dplyr::select(ends_with(".sc")) %>%
+  summarize(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+  rename(grid.170 = grid170) %>%
+  dplyr::select(-eigenvectors.sc) %>%
+  left_join(grid170_mets, .)
+```
+
+Correlation of community metrics. Richness is highly correlated with FRich (0.87) and shannon is highly correlated with evenness (0.93). So probably should only keep shannon and the functional metrics. 
+```{r}
+chart.Correlation(grid170_mets[,c("n.all", "shannon_170", "even.170", "FRich", "FEven", "FDiver")],
+                  method = "spearman")
+```
+
+Correlation of structure metrics - basal area and stand dens, basal area and mean dbh, max h and mean h, max h and vrumple, rumple and lad, 
+```{r}
+chart.Correlation(grid170_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc",
+                                    "stand.dens.sc","basal.area.sc","stem.vol.sc","mean.tree.h.sc",
+                                    "mean.dbh.sc", "zentropy.sc","lad.max.sc","rumple.sc","vFRcanopy.sc",
+                                    "vzrumple.sc","ClosedGapSpace.sc")],
+                  method = "spearman")
+```
+
+#### Species richness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#removing MO1 partition since no structure mets are from this pt
+grid170_mets <- grid170_mets[complete.cases(grid170_mets),]
+
+#fitting global model for use in dredge
+rm_170 <- glm(n.all ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+rich_170_models <- dredge(rm_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+rich_models_170_avg <- model.avg(rich_170_models)
+summary(rich_models_170_avg)
+```
+
+```{r}
+plot(rich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (170 ha grid) - Av. Mod")
+```
+
+#### Species diversity model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+sm_170 <- glm(shannon_170 ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+shan_170_models <- dredge(sm_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+shan_models_170_avg <- model.avg(shan_170_models)
+summary(shan_models_170_avg)
+```
+
+```{r}
+plot(shan_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Diversity (170 ha grid) - Av. Mod")
+```
+
+#### Species eveness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+em_170 <- glm(even.170 ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+even_170_models <- dredge(em_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+even_models_170_avg <- model.avg(even_170_models)
+summary(even_models_170_avg)
+```
+
+```{r}
+plot(even_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Evenness (170 ha grid) - Av. Mod")
+```
+
+#### Functional richness model
+
+The beta coefficients are very large here, not sure why this is so much different from the rest of the models. Maybe an odd convergence issue?
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fr_170 <- glm(FRich ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+frich_170_models <- dredge(fr_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+frich_models_170_avg <- model.avg(frich_170_models)
+summary(frich_models_170_avg)
+```
+
+```{r}
+plot(frich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich (170 ha grid) - Av. Mod")
+```
+
+#### Functional evenness model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fe_170 <- glm(FEven ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+feven_170_models <- dredge(fe_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+feven_models_170_avg <- model.avg(feven_170_models)
+summary(feven_models_170_avg)
+```
+
+```{r}
+plot(feven_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven (170 ha grid) - Av. Mod")
+```
+
+#### Functional divergence model
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#fitting global model for use in dredge
+fd_170 <- glm(FDiver ~ 
+             max.height.sc +
+             mean.tree.h.sc +
+             CRR.rho.sc +
+             sd.r.sc +
+             mean.dbh.sc +
+             basal.area.sc + 
+             stand.dens.sc +
+             stem.vol.sc +
+             pts.below.2m.sc +
+             zentropy.sc +
+             lad.max.sc +
+             rumple.sc +
+             vFRcanopy.sc +
+             vzrumple.sc +
+             ClosedGapSpace.sc,
+           na.action = na.fail,
+           family = Gamma(link = "log"), 
+           offset = log(act.days),
+           data = grid170_mets)
+
+#dredge
+fdiver_170_models <- dredge(fd_170, m.max = 2, 
+                      subset = !(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc) && 
+                               !(max.height.sc && mean.tree.h.sc) && 
+                               !(max.height.sc && vzrumple.sc) && 
+                               !(lad.max.sc && rumple.sc))
+```
+
+averaged model output - averaging all models
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fdiver_models_170_avg <- model.avg(fdiver_170_models)
+summary(fdiver_models_170_avg)
+```
+
+```{r}
+plot(fdiver_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FDiver (170 ha grid) - Av. Mod")
+```
+
+
+#### Comparing coefficient plots from averaged models
+
+Showing only richness, shannon, FEven, and FDiver models, since FRich seemingly had nonsense results
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_rich <- extract_coefs(rich_models_170_avg, "rich")
+coef_shan <- extract_coefs(shan_models_170_avg, "shan")
+coef_even <- extract_coefs(even_models_170_avg, "even")
+coef_fric <- extract_coefs(frich_models_170_avg, "fric")
+coef_feve <- extract_coefs(feven_models_170_avg, "feve")
+coef_fdiv <- extract_coefs(fdiver_models_170_avg, "fdiv")
+
+#combine all
+coef_df <- rbind(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
+
+#select only predictors with 50% CI's that don't overlap zero
+coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+coef_df_filter %>%
+  filter(model %in% c("shan", "rich", "fdiv", "feve")) %>%
+ggplot(aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Reliable Predictors from Avg. 170ha grid Models",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE))
 ```
 
 
@@ -1619,7 +2500,7 @@ plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE,
 
 Since fric is highly correlated with richness (0.81) it makes sense to ignore this model here. Of the other models that have reliable predictors, the shannon and evenness values are also highly correlated (0.89) and both show vFRcanopy (vegetated volume) as the sole reliable predictor, so I also omit the evenness model here. 
 
-```{r}
+```{r fig.height=9, fig.width=6}
 #extract coefficients for each averaged model
 coef_rich <- extract_coefs(rich_models_pt_avg, "rich")
 coef_shan <- extract_coefs(shan_models_pt_avg, "shan")
@@ -1636,7 +2517,7 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_pt_df$model <- factor(coef_pt_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with CI's that don't overlap zero
-coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`2.5 %` <= 0 & coef_pt_df$`97.5 %` >= 0),]
+coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`25 %` <= 0 & coef_pt_df$`75 %` >= 0),]
 coef_pt_df_filter <- coef_pt_df_filter[coef_pt_df_filter$predictor != "(Intercept)",]
 
 #plotting
@@ -1658,6 +2539,8 @@ ggplot(coef_pt_df_filter[!coef_pt_df_filter$model %in% c("fric","even"),],
                               "rumple.sc" = "rumple index"))
 ```
 
+
+Comparing avg model multiplots for CT and partition scales
 ```{r eval=FALSE, include=FALSE}
 coefplot1 <- ggplot(coef_df_filter, aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
