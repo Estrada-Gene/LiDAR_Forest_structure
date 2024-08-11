@@ -362,9 +362,9 @@ obs_table <- m %>%
   filter(!Species %in% c("Tragulus spp.","Unid civet","Unid Rat","Muntiacus spp.")) %>%
   group_by(locationID, Species) %>%
   summarise(n.ind = sum(Number.of.Animals)) %>%
-  pivot_wider(names_from = Species, values_from = n.ind) %>%
-  left_join(., ct_active_days) %>%
-  mutate(across(-0, ~ . / act.days))
+  pivot_wider(names_from = Species, values_from = n.ind)
+  #left_join(., ct_active_days) %>%
+  #mutate(across(-0, ~ . / act.days))
 
 #placing columns in alphabetical order
 species_columns <- sort(setdiff(names(obs_table), c("locationID", "act.days")))
@@ -431,7 +431,7 @@ obs_table_pt <- ct_active_days %>%
   left_join(obs_table_pt, ., by = "partition")
 
 #standardizing by survey effort and assigning partition to row names
-obs_table_pt <- obs_table_pt %>% mutate(across(-0, ~ . / act.days))
+#obs_table_pt <- obs_table_pt %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_pt <- as.data.frame(obs_table_pt)
 rownames(obs_table_pt) <- obs_table_pt$partition
@@ -454,22 +454,6 @@ fd_metrics_pt_df <- data.frame(
 #add to metrics table
 ct_div_mets_terr <- left_join(ct_div_mets_terr, fd_metrics_pt_df, by = "partition")
 ```
-
-
-#### Correlation between community metrics
-
-By camera trap location:
-```{r}
-chart.Correlation(stand_mets[,c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
-
-By partition:
-```{r}
-chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
-
 
 
 ## COMMUNITY METRICS VISUALIZATION
@@ -694,10 +678,10 @@ hist(distance_df$distance[distance_df$distance > 0], las = 1,
 
 ## SPATIAL AUTOCORRELATION
 
-Firdt I want to just visualize spatial patterns of structure variables across the study site, by camera trap location. 
+First I want to just visualize spatial patterns of structure variables and community metrics across the study site, by camera trap location. 
 ```{r fig.height=8, fig.width=10}
 stand_mets %>%
-  dplyr::select(locationID, longitude, latitude, metric_list) %>%
+  dplyr::select(locationID, longitude, latitude, metric_list, FRich, FEven, FDiver) %>%
   tidyr::pivot_longer(cols = -c(locationID, longitude, latitude), 
                       names_to = "variable", values_to = "value") %>%
   group_by(variable) %>%
@@ -716,6 +700,36 @@ stand_mets %>%
         legend.key.size = unit(0.3, "cm"),
         legend.text = element_text(size = 8))
 ```
+
+
+Mapping the community metrics by all CT locations (the figure above only plots scanned locations)
+```{r}
+# Specify the order of the variables and rename them
+div_mets_viz %>%
+  dplyr::select(locationID, shannon_ct, n.all, div_even) %>%
+  left_join(fd_metrics_df, by = "locationID") %>%
+  left_join(ct[, c("locationID", "latitude", "longitude")]) %>%
+  tidyr::pivot_longer(cols = c(n.all, shannon_ct, div_even, FRich, FEven, FDiver), 
+                      names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  mutate(norm_value = (value - min(value, na.rm = TRUE)) / (max(value, na.rm = TRUE) - min(value, na.rm = TRUE))) %>%
+  ungroup() %>%
+  mutate(variable = factor(variable, levels = c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver"),
+                           labels = c("Species Richness", "Shannon Diversity", "Species Evenness", 
+                                      "Func. Richness", "Func. Evenness", "Func. Divergence"))) %>%
+  ggplot(aes(x = longitude, y = latitude, color = norm_value)) +
+  geom_point(size = 3) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0.5) +
+  facet_wrap(~ variable, scales = "free", labeller = label_value) +
+  labs(x = "Longitude", y = "Latitude", color = "") +
+  theme_minimal() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 10),
+        legend.key.size = unit(0.3, "cm"),
+        legend.text = element_text(size = 8))
+
+```
+
 
 ### Global Moran's I 
 
@@ -878,6 +892,9 @@ m_filtered <- grid75_cells %>%
   rename(grid.75 = grid_id) %>%
   left_join(m_filtered, .)
 
+#write grid as shapefile
+#st_write(final_grid, "medium_grid_75ha.shp")
+
 ###########################################################################################################
 #for large sized grid (~170 ha)
 initial_size <- 48 
@@ -913,6 +930,9 @@ m_filtered <- grid170_cells %>%
   dplyr::select(locationID, grid_id) %>%
   rename(grid.170 = grid_id) %>%
   left_join(m_filtered, .)
+
+#write grid as shapefile
+#st_write(final_grid, "medium_grid_170ha.shp")
 ```
 
 
@@ -962,9 +982,9 @@ vn - number of 1m voxels created for the following volumetric metrics.
 
 15. ClosedGapSpace - volume of voxels that are classified as gaps underneath the canopy
 
-#### Check correlation between predictors.
+#### Check correlation between community metrics and predictors.
 
-Basal area is highly correlated (\>0.8) with stem volume and stand density.
+PREDICTORS: Basal area is highly correlated (\>0.8) with stem volume and stand density.
 
 ```{r}
 chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc","stand.dens.sc",
@@ -972,6 +992,13 @@ chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.belo
                                 "lad.max.sc","rumple.sc","vFRcanopy.sc","vzrumple.sc","ClosedGapSpace.sc")],
                   method = "spearman")
 ```
+
+COMMUNITY METS: By camera trap location - species richness & shannon, and FRich and shannon are moderately correlated (both 0.69), FRich and richness are highly correlated (0.82)
+```{r}
+chart.Correlation(stand_mets[,c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")],
+                  method = "spearman")
+```
+
 
 ### Models by camera trap location
 Fitting global model then using {dredge} to find models of best fit.
@@ -1003,7 +1030,7 @@ rm1 <- glm(n.all ~
            offset = log(act.days),
            data = stand_mets)
 #dredge
-rich_models <- dredge(rm1, m.max = 6, 
+rich_models <- dredge(rm1, m.max = 3, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
@@ -1049,7 +1076,7 @@ shannon_model <- glm(shannon_ct ~
                         offset = log(act.days),
                         data = stand_mets)
 #dredge
-shan_models <- dredge(shannon_model, m.max = 6, 
+shan_models <- dredge(shannon_model, m.max = 3, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
@@ -1094,7 +1121,7 @@ even_model <- glm(div_even ~
               offset = log(act.days),
               data = stand_mets)
 #dredge
-even_models <- dredge(even_model, m.max = 6, 
+even_models <- dredge(even_model, m.max = 3, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
@@ -1143,7 +1170,7 @@ frich_model <- glm(FRich ~
               offset = log(act.days),      
               data = stand_mets_FD)
 #dredge
-frich_models <- dredge(frich_model, m.max = 6, 
+frich_models <- dredge(frich_model, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
@@ -1187,7 +1214,7 @@ feven_model <- glm(FEven ~
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-feven_models <- dredge(feven_model, m.max = 6, 
+feven_models <- dredge(feven_model, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
@@ -1235,7 +1262,7 @@ fdiver_model <- glm(FDiver ~
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-fdiver_models <- dredge(fdiver_model, m.max = 6, 
+fdiver_models <- dredge(fdiver_model, m.max = 3, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
@@ -1361,7 +1388,7 @@ obs_table_75 <- ct_active_days %>%
 grid75_mets <- left_join(grid75_mets, obs_table_75[,c("grid.75", "act.days")])
 
 #standardizing by survey effort and assigning partition to row names
-obs_table_75 <- obs_table_75 %>% mutate(across(-0, ~ . / act.days))
+#obs_table_75 <- obs_table_75 %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_75 <- as.data.frame(obs_table_75)
 obs_table_75 <- obs_table_75[-22,]
@@ -1443,7 +1470,7 @@ rm_75 <- glm(n.all ~
            data = grid75_mets)
 
 #dredge
-rich_75_models <- dredge(rm_75, m.max = 3, 
+rich_75_models <- dredge(rm_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1488,7 +1515,7 @@ sm_75 <- glm(shannon_75 ~
            data = grid75_mets)
 
 #dredge
-shan_75_models <- dredge(sm_75, m.max = 3, 
+shan_75_models <- dredge(sm_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1533,7 +1560,7 @@ em_75 <- glm(even.75 ~
            data = grid75_mets)
 
 #dredge
-even_75_models <- dredge(em_75, m.max = 3, 
+even_75_models <- dredge(em_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1578,7 +1605,7 @@ fr_75 <- glm(FRich ~
            data = grid75_mets)
 
 #dredge
-frich_75_models <- dredge(fr_75, m.max = 3, 
+frich_75_models <- dredge(fr_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1623,7 +1650,7 @@ fe_75 <- glm(FEven ~
            data = grid75_mets)
 
 #dredge
-feven_75_models <- dredge(fe_75, m.max = 3, 
+feven_75_models <- dredge(fe_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1668,7 +1695,7 @@ fd_75 <- glm(FDiver ~
            data = grid75_mets)
 
 #dredge
-fdiver_75_models <- dredge(fd_75, m.max = 3, 
+fdiver_75_models <- dredge(fd_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1773,7 +1800,7 @@ obs_table_170 <- ct_active_days %>%
 grid170_mets <- left_join(grid170_mets, obs_table_170[,c("grid.170", "act.days")])
 
 #standardizing by survey effort and assigning partition to row names
-obs_table_170 <- obs_table_170 %>% mutate(across(-0, ~ . / act.days))
+#obs_table_170 <- obs_table_170 %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_170 <- as.data.frame(obs_table_170)
 obs_table_170 <- obs_table_170[-13,] #drop NA row
@@ -1868,6 +1895,7 @@ summary(rich_models_170_avg)
 ```
 
 ```{r}
+dev.off()
 plot(rich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (170 ha grid) - Av. Mod")
 ```
 
@@ -2161,7 +2189,14 @@ ct_div_mets_terr <- ct %>%
   left_join(ct_div_mets_terr)
 ```
 
-#### Check correlation between predictors.
+#### Check correlation between outcome variables and predictors.
+
+Correlation of community metrics. Richness is highly correlated with FRich and shannon is highly correlated with evenness. As above, FRich shows a large outlier in one of the group averages. 
+```{r}
+chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")],
+                  method = "spearman")
+```
+
 
 Basal area is highly correlated (\>0.8) with stand density, max height with mean tree h and vzrumple, and vzrumple with mean tree height and rumple. 
 
@@ -2229,6 +2264,7 @@ summary(rich_models_pt_avg)
 ```
 
 ```{r}
+dev.off()
 plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (partition) - Av. Mod")
 ```
 
@@ -2904,5 +2940,77 @@ kbl(cor_df, format = "html",
     caption = "Pearson correlations beteen structure metrics and diversity metrics") %>%
   kable_styling(bootstrap_options = "striped") %>%
   add_header_above(c(" " = 1, "Camera Trap Scale" = 6, "Partition Scale" = 6))
+```
+
+
+## Spatial heterogeneity in the grid systems compared to partitions
+
+How do forest types and partitions map on to the grid systems created above?
+
+In the 75 ha grid system, cells contain between 1 and 6 partitions. In the 170 ha grid system this range is 2 - 7. 
+```{r}
+#read in the forest type and partitions by grid cell data
+grid_int <- read.csv(file = "data/grids_intersect.csv", header = TRUE)
+
+table(grid_int$grid_id[grid_int$grid_size == 75])
+
+table(grid_int$grid_id[grid_int$grid_size == 170])
+```
+
+What proportion of partitions are within each cell of the two grid systems?
+```{r}
+#calculate partition proportions
+grid_int <- grid_int %>%
+  group_by(grid_size, grid_id) %>%
+  mutate(prop = Shape_Area / sum(Shape_Area))
+
+#plot for 75 ha grid
+ggplot(grid_int[grid_int$grid_size == 75,],
+       aes(x = factor(grid_id), y = prop, fill = partition)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Grid Cell ID", y = "Proportion of Forest Type Partition", 
+       fill = "partition", title = "Partitions Within 75 ha Grid Cells") +
+  theme_classic() +
+  coord_flip()
+
+#plot for 170 ha grid
+ggplot(grid_int[grid_int$grid_size == 170,],
+       aes(x = factor(grid_id), y = prop, fill = partition)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Grid Cell ID", y = "Proportion of Forest Type Partition", 
+       fill = "partition", title = "Partitions Within 170 ha Grid Cells") +
+  theme_classic() +
+  coord_flip()
+```
+
+
+How does variation in structure metrics compare between scales? The table shows the average standard deviation of structure metrics across cells and partitions, comparing across the different scales. If grid systems are capturing more ecological variation in these metrics compared to forest type partitions, then we would expect the 170 ha grid average SD's to regularly be larger than the SD's at the partition scale. This is indeed what we see, with most (11/15) structure metrics and most (4/6) community metrics showing less variation at the partition scale than the comparable 170 ha grid scale. 
+```{r}
+metric_list_FD <- c(metric_list, "FRich", "FEven", "FDiver")
+
+#function to calculate summary statistics
+summarize_sd <- function(data, scale_column) {
+  data %>%
+    group_by(!!sym(scale_column)) %>%
+    summarize(across(all_of(metric_list_FD), ~ sd(.x, na.rm = TRUE))) %>%
+    summarize(across(all_of(metric_list_FD), list(mean_sd = ~ mean(.x, na.rm = TRUE))))
+}
+
+#calculate summary stats for each scale
+summary_75ha <- summarize_sd(stand_mets, "grid75")
+summary_170ha <- summarize_sd(stand_mets, "grid170")
+summary_partition <- summarize_sd(stand_mets, "partition")
+
+#combine
+bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
+                           summary_170ha %>% mutate(scale = "170 ha"),
+                           summary_partition %>% mutate(scale = "partition")) %>%
+  pivot_longer(cols = -scale, names_to = "metric_stat", values_to = "value") %>%
+  separate(metric_stat, into = c("metric", "stat"), sep = "_sd") %>%
+  pivot_wider(names_from = scale, values_from = value) %>%
+  mutate("pt < 170ha" = partition < `170 ha`,
+         "pt < 75ha" = partition < `75 ha`) %>%
+  print(n = Inf)
+
 ```
 
