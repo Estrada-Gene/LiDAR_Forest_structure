@@ -1317,7 +1317,7 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with 50% CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
@@ -2619,6 +2619,256 @@ cowplot::plot_grid(coefplot1, coefplot2, nrow = 2)
 ```
 
 
+### Comparing effects of scale by outcome variable
+
+#### Species richness
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_rich_ct <- extract_coefs(rich_models_avg, "rich")
+coef_rich_ct$model <- "rich_ct"
+coef_rich_75 <- extract_coefs(rich_models_75_avg, "rich")
+coef_rich_75$model <- "rich_75"
+coef_rich_170 <- extract_coefs(rich_models_170_avg, "rich")
+coef_rich_170$model <- "rich_170"
+coef_rich_pt <- extract_coefs(rich_models_pt_avg, "rich")
+coef_rich_pt$model <- "rich_pt"
+
+#combine all
+coef_df <- rbind(coef_rich_ct, coef_rich_75, coef_rich_170, coef_rich_pt)
+rm(coef_rich_ct, coef_rich_75, coef_rich_170, coef_rich_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("rich_ct","rich_75","rich_170","rich_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Species Richness Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlim(-3, 3)
+```
+
+#### Species diversity
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_shan_ct <- extract_coefs(shan_models_avg, "shan")
+coef_shan_ct$model <- "shan_ct"
+coef_shan_75 <- extract_coefs(shan_models_75_avg, "shan")
+coef_shan_75$model <- "shan_75"
+coef_shan_170 <- extract_coefs(shan_models_170_avg, "shan")
+coef_shan_170$model <- "shan_170"
+coef_shan_pt <- extract_coefs(shan_models_pt_avg, "shan")
+coef_shan_pt$model <- "shan_pt"
+
+#combine all
+coef_df <- rbind(coef_shan_ct, coef_shan_75, coef_shan_170, coef_shan_pt)
+rm(coef_shan_ct, coef_shan_75, coef_shan_170, coef_shan_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("shan_ct","shan_75","shan_170","shan_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Shannon Diversity Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlim(-3, 3)
+```
+
+#### Species evenness
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_even_ct <- extract_coefs(even_models_avg, "even")
+coef_even_ct$model <- "even_ct"
+coef_even_75 <- extract_coefs(even_models_75_avg, "even")
+coef_even_75$model <- "even_75"
+coef_even_170 <- extract_coefs(even_models_170_avg, "even")
+coef_even_170$model <- "even_170"
+coef_even_pt <- extract_coefs(even_models_pt_avg, "even")
+coef_even_pt$model <- "even_pt"
+
+#combine all
+coef_df <- rbind(coef_even_ct, coef_even_75, coef_even_170, coef_even_pt)
+rm(coef_even_ct, coef_even_75, coef_even_170, coef_even_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("even_ct","even_75","even_170","even_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Species Evenness Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlim(-3, 3)
+```
+
+#### Functional richness
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_Fric_ct <- extract_coefs(frich_models_avg, "fric")
+coef_Fric_ct$model <- "Fric_ct"
+coef_Fric_75 <- extract_coefs(frich_models_75_avg, "fric")
+coef_Fric_75$model <- "Fric_75"
+coef_Fric_170 <- extract_coefs(frich_models_170_avg, "fric")
+coef_Fric_170$model <- "Fric_170"
+coef_Fric_pt <- extract_coefs(frich_pt_models_avg, "fric")
+coef_Fric_pt$model <- "Fric_pt"
+
+#combine all
+coef_df <- rbind(coef_Fric_ct, coef_Fric_75, coef_Fric_170, coef_Fric_pt)
+rm(coef_Fric_ct, coef_Fric_75, coef_Fric_170, coef_Fric_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("Fric_ct","Fric_75","Fric_170","Fric_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+coef_df %>%
+  #filter(model %in% c("Fric_ct", "Fric_75")) %>%
+ggplot(aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Func. Richness Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE))
+```
+
+#### Functional evenness
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_Feve_ct <- extract_coefs(feven_models_avg, "feve")
+coef_Feve_ct$model <- "Feve_ct"
+coef_Feve_75 <- extract_coefs(feven_models_75_avg, "feve")
+coef_Feve_75$model <- "Feve_75"
+coef_Feve_170 <- extract_coefs(feven_models_170_avg, "feve")
+coef_Feve_170$model <- "Feve_170"
+coef_Feve_pt <- extract_coefs(feven_pt_models_avg, "feve")
+coef_Feve_pt$model <- "Feve_pt"
+
+#combine all
+coef_df <- rbind(coef_Feve_ct, coef_Feve_75, coef_Feve_170, coef_Feve_pt)
+rm(coef_Feve_ct, coef_Feve_75, coef_Feve_170, coef_Feve_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("Feve_ct","Feve_75","Feve_170","Feve_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Func. Evenness Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlim(-3, 3)
+```
+
+#### Functional divergence
+
+```{r fig.height=9, fig.width=6}
+#extract coefficients from averaged models
+coef_Fdiv_ct <- extract_coefs(fdiver_models_avg, "fdiv")
+coef_Fdiv_ct$model <- "Fdiv_ct"
+coef_Fdiv_75 <- extract_coefs(fdiver_models_75_avg, "fdiv")
+coef_Fdiv_75$model <- "Fdiv_75"
+coef_Fdiv_170 <- extract_coefs(fdiver_models_170_avg, "fdiv")
+coef_Fdiv_170$model <- "Fdiv_170"
+coef_Fdiv_pt <- extract_coefs(fdiver_pt_models_avg, "fdiv")
+coef_Fdiv_pt$model <- "Fdiv_pt"
+
+#combine all
+coef_df <- rbind(coef_Fdiv_ct, coef_Fdiv_75, coef_Fdiv_170, coef_Fdiv_pt)
+rm(coef_Fdiv_ct, coef_Fdiv_75, coef_Fdiv_170, coef_Fdiv_pt)
+
+#specifying order to plot models
+coef_df$model <- factor(coef_df$model, levels = rev(c("Fdiv_ct","Fdiv_75","Fdiv_170","Fdiv_pt")))
+
+#select only predictors with 50% CI's that don't overlap zero
+#coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+#plotting - only the functional models for now
+ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Func. Divergence Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1),
+        legend.position = "bottom") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlim(-3, 3)
+```
+
+
 ## ORDINATION ANALYSIS
 
 Using PCA to see how scan locations group together and to identify which forest structure metrics best differentiate between forest types and partitions.
@@ -3013,4 +3263,3 @@ bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
   print(n = Inf)
 
 ```
-
