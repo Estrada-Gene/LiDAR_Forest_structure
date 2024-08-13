@@ -1322,7 +1322,7 @@ coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)",
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  #filter(model %in% c("rich", "fric", "fdiv")) %>%
+  filter(model %in% c("rich", "shan", "feve", "fdiv")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -1335,10 +1335,7 @@ ggplot(aes(x = estimate, y = predictor, color = model)) +
        x = "Coefficient Estimate", y = "") +
   theme(axis.text.y = element_text(hjust = 1),
         legend.position = "bottom") +
-  guides(color = guide_legend(reverse = TRUE)) +
-  scale_y_discrete(labels = c("vFRcanopy.sc" = "veg. vol.",
-                              "stand.dens.sc" = "tree dens.",
-                              "basal.area.sc" = "basal area"))
+  guides(color = guide_legend(reverse = TRUE))
 ```
 
 
@@ -1735,12 +1732,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with 50% CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("shan", "fric", "fdiv", "feve")) %>%
+  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -2147,12 +2144,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with 50% CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("shan", "rich", "fdiv", "feve")) %>%
+  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -2553,12 +2550,13 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_pt_df$model <- factor(coef_pt_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with CI's that don't overlap zero
-coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`25 %` <= 0 & coef_pt_df$`75 %` >= 0),]
+coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`2.5 %` <= 0 & coef_pt_df$`97.5 %` >= 0),]
 coef_pt_df_filter <- coef_pt_df_filter[coef_pt_df_filter$predictor != "(Intercept)",]
 
 #plotting
-ggplot(coef_pt_df_filter[!coef_pt_df_filter$model %in% c("fric","even"),], 
-       aes(x = estimate, y = predictor, color = model)) +
+coef_pt_df_filter %>%
+  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
+ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
                 position = position_dodge(width = 0.5)) +
