@@ -619,7 +619,7 @@ cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 
 ## DISTANCE x DISSIMILARITY
 
-Calculating pairwise distance for scanned locations and plotting values by pairwise similarity, with blue points showing pairs in the same forest type and red points pairs in different forest types. I included the six community metrics here as well, but it might be worthwhile to see what the linear models look like for these for the full set of camera traps, since we know that the community metrics for only the scanned sites differs from the values for all CT sites, especially in the higher elevation forest types.
+Calculating pairwise distance for scanned locations and plotting values by pairwise similarity, with blue points showing pairs in the same forest type and red points pairs in different partitions. I include community metrics here as well, but it might be worthwhile to see what the linear models look like for these for the full set of camera traps, since we know that the community metrics for only the scanned sites differs from the values for all CT sites, especially in the higher elevation partitions.
 ```{r fig.height=8, fig.width=10}
 #pairwise distances for scanned locations
 distance_df <- as.data.frame(as.table(distm(stand_mets[,c("longitude","latitude")], fun = distHaversine)))
@@ -649,15 +649,15 @@ similarity_df$loc2 <- as.integer(similarity_df$loc2)
 pairs_df <- distance_df %>%
   left_join(similarity_df, by = c("loc1", "loc2")) %>%
   mutate(
-    same_forest_type = stand_mets$habitat[as.integer(loc1)] == stand_mets$habitat[as.integer(loc2)],
-    same_forest_type = ifelse(same_forest_type, "same", "different"))
+    same_pt = stand_mets$partition[as.integer(loc1)] == stand_mets$partition[as.integer(loc2)],
+    same_pt = ifelse(same_pt, "same", "different"))
 
 #plot
 ggplot(pairs_df[!pairs_df$distance == 0,], 
        aes(x = distance, y = similarity)) +
-  geom_point(aes(color = same_forest_type, shape = same_forest_type), 
+  geom_point(aes(color = same_pt, shape = same_pt), 
              alpha = 0.5, size = 0.75) +
-  geom_smooth(aes(group = same_forest_type, color = same_forest_type), 
+  geom_smooth(aes(group = same_pt, color = same_pt), 
               method = "lm", se = FALSE) +
   facet_wrap(~ metric, scales = "free_y") +
   labs(x = "Geographic Distance (m)", y = "Structural Dissimilarity (Euclidean Distance)",
@@ -668,6 +668,42 @@ ggplot(pairs_df[!pairs_df$distance == 0,],
         legend.justification = c(1, 0),   
         legend.box.just = "right")
 ```
+
+
+Comparison table showing intercepts and slopes of the linear models plotted above. 11/15 structure metrics show a lower intercept for the 'same partition' group compared to the 'different partition' group, while 9/15 show lower slope values for the 'same partition' group. 
+```{r}
+#list for intercepts and slopes
+model_results <- lapply(metric_list, function(metric_name) {
+  metric_df <- pairs_df %>%
+    filter(metric == metric_name & distance != 0)
+
+  model_same <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "same",])
+  model_different <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "different",])
+
+  intercept_same <- coef(model_same)[1]
+  slope_same <- coef(model_same)[2]
+  
+  intercept_different <- coef(model_different)[1]
+  slope_different <- coef(model_different)[2]
+  
+  intercept_comparison <- intercept_same < intercept_different
+  slope_comparison <- slope_same < slope_different
+  
+  data.frame(
+    metric = metric_name,
+    int.same = intercept_same,
+    int.diff = intercept_different,
+    slope.same = slope_same,
+    slope.diff = slope_different,
+    int.s.lt.d = intercept_comparison,
+    slo.s.lt.d = slope_comparison
+  )
+})
+
+#combine into one table
+(model_results <- do.call(rbind, model_results))
+```
+
 
 Histogram of pairwise distances between scanned locations to see if there are any obvious breaks here that can guide grid size
 ```{r}
@@ -935,6 +971,54 @@ m_filtered <- grid170_cells %>%
 #st_write(final_grid, "medium_grid_170ha.shp")
 ```
 
+One more large sized grid, at 310 ha, not to be modeled.  (65,5)
+```{r} 
+#for large sized grid (~170 ha)
+initial_size <- 85 
+min_cells <- 3
+
+#find appropriate grid size
+result <- find_grid_size(initial_size, min_cells)
+final_grid <- result$grid_sf
+num_cells <- result$num_cells
+as.numeric(st_area(final_grid)[1]) #in m^2
+
+#plot grid
+plot(st_geometry(final_grid), col = "white", border = "grey50", main = "Grid with Survey Locations")
+plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
+
+#how many scanned locations in each grid cell
+grid310 <- st_join(data_sf, final_grid, join = st_within)
+table(grid310$grid_id)
+length(unique(grid310$grid_id))
+
+#add grid designations to stand mets df
+stand_mets <- grid310 %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid310 = grid_id) %>%
+  left_join(stand_mets, .)
+
+#adding grid to full CT list and then to mammal obs table (m)
+grid310_cells <- st_join(ct_sf, final_grid, join = st_within)
+
+m_filtered <- grid310_cells %>%
+  st_drop_geometry() %>%
+  dplyr::select(locationID, grid_id) %>%
+  rename(grid.310 = grid_id) %>%
+  left_join(m_filtered, .)
+```
+
+Again for the grid that I created in ArcGIS - 640 ha 2X2 
+```{r}
+grid650 <- read.csv(file = "data/locationID_grid650.csv", header = TRUE)
+
+stand_mets <- grid650 %>%
+  dplyr::select(locationID, X650ha_gridID) %>%
+  rename(grid650 = X650ha_gridID) %>%
+  left_join(stand_mets, .)
+```
+
 
 ## MODELING - Terrestrial mammals (CT data)
 
@@ -1045,7 +1129,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging models
 rich_models_avg <- model.avg(rich_models)
-#summary(rich_models_avg)
+summary(rich_models_avg)
 
 plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
@@ -1091,7 +1175,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging models
 shan_models_avg <- model.avg(shan_models)
-#summary(shan_models_avg)
+summary(shan_models_avg)
 
 plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
 ```
@@ -1136,7 +1220,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging all models
 even_models_avg <- model.avg(even_models)
-#summary(even_models_avg)
+summary(even_models_avg)
 
 plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
@@ -1183,7 +1267,7 @@ averaged model output - averaging all models
 
 ```{r}
 frich_models_avg <- model.avg(frich_models)
-#summary(frich_models_avg)
+summary(frich_models_avg)
 
 plot(frich_models_avg, full = FALSE, intercept = FALSE, main = "Functional Richness - Avg. Model")
 ```
@@ -3195,22 +3279,33 @@ kbl(cor_df, format = "html",
 
 How do forest types and partitions map on to the grid systems created above?
 
-In the 75 ha grid system, cells contain between 1 and 6 partitions. In the 170 ha grid system this range is 2 - 7. 
+In the 75 ha grid system, cells contain between 1 and 6 partitions, with an average of 2.8 paritions per cell. In the 170 ha grid system this range is 2 - 7 with an average of 3.2. 
 ```{r}
 #read in the forest type and partitions by grid cell data
 grid_int <- read.csv(file = "data/grids_intersect.csv", header = TRUE)
 
+#remove heath forests
+grid_int <- grid_int[!grid_int$habitat == "Heath",]
+
+#number and avg. of partitions in each cell of the two grid systems
 table(grid_int$grid_id[grid_int$grid_size == 75])
+mean(table(grid_int$grid_id[grid_int$grid_size == 75]))
 
 table(grid_int$grid_id[grid_int$grid_size == 170])
+mean(table(grid_int$grid_id[grid_int$grid_size == 170]))
 ```
 
-What proportion of partitions are within each cell of the two grid systems?
+What proportion of partitions are within each cell of the two grid systems? I still need to choose a color scheme for the partitions, something that matches the forest type colors. 
 ```{r}
 #calculate partition proportions
 grid_int <- grid_int %>%
   group_by(grid_size, grid_id) %>%
   mutate(prop = Shape_Area / sum(Shape_Area))
+
+#ordering partitions
+grid_int$partition <- factor(grid_int$partition, levels = rev(c("PS1", "FS1", "AB1", "AB2",
+                                          "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2")),
+                    ordered = TRUE)
 
 #plot for 75 ha grid
 ggplot(grid_int[grid_int$grid_size == 75,],
@@ -3232,32 +3327,86 @@ ggplot(grid_int[grid_int$grid_size == 170,],
 ```
 
 
-How does variation in structure metrics compare between scales? The table shows the average standard deviation of structure metrics across cells and partitions, comparing across the different scales. If grid systems are capturing more ecological variation in these metrics compared to forest type partitions, then we would expect the 170 ha grid average SD's to regularly be larger than the SD's at the partition scale. This is indeed what we see, with most (11/15) structure metrics and most (4/6) community metrics showing less variation at the partition scale than the comparable 170 ha grid scale. 
+How does variation in structure metrics compare between scales? The table shows the average adjusted coefficient of variation (which controls for sample size) of structure metrics across cells and partitions, comparing across the different scales. If grid systems are capturing more ecological variation in these metrics compared to forest type partitions, then we would expect the 170 ha grid average values to be larger than those at the partition scale. This is indeed what we see, with most (12/15) structure metrics and half (3/6) community metrics showing less variation at the partition scale than the comparable 170 ha grid scale. 
 ```{r}
 metric_list_FD <- c(metric_list, "FRich", "FEven", "FDiver")
+stand_mets$study.area <- 1
 
-#function to calculate summary statistics
-summarize_sd <- function(data, scale_column) {
+#function to calculate adjusted coefficient of variation
+summarize_adj_cv <- function(data, scale_column) {
   data %>%
     group_by(!!sym(scale_column)) %>%
-    summarize(across(all_of(metric_list_FD), ~ sd(.x, na.rm = TRUE))) %>%
-    summarize(across(all_of(metric_list_FD), list(mean_sd = ~ mean(.x, na.rm = TRUE))))
+    summarize(across(all_of(metric_list_FD), ~ calculate_adj_cv(.x))) %>%
+    summarize(across(all_of(metric_list_FD), list(mean_adj_cv = ~ mean(.x, na.rm = TRUE))))
 }
 
-#calculate summary stats for each scale
-summary_75ha <- summarize_sd(stand_mets, "grid75")
-summary_170ha <- summarize_sd(stand_mets, "grid170")
-summary_partition <- summarize_sd(stand_mets, "partition")
+#calculate adj CV summary stats for each scale and entire study area
+summary_75ha <- summarize_adj_cv(stand_mets, "grid75")
+summary_170ha <- summarize_adj_cv(stand_mets, "grid170")
+summary_650ha <- summarize_adj_cv(stand_mets, "grid650")
+summary_partition <- summarize_adj_cv(stand_mets, "partition")
+summary_all <- summarize_adj_cv(stand_mets, "study.area")
 
 #combine
-bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
-                           summary_170ha %>% mutate(scale = "170 ha"),
-                           summary_partition %>% mutate(scale = "partition")) %>%
+adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
+  summary_170ha %>% mutate(scale = "170 ha"),
+  summary_650ha %>% mutate(scale = "650 ha"),
+  summary_partition %>% mutate(scale = "partition"),
+  summary_all %>% mutate(scale = "study area")) %>%
   pivot_longer(cols = -scale, names_to = "metric_stat", values_to = "value") %>%
-  separate(metric_stat, into = c("metric", "stat"), sep = "_sd") %>%
+  separate(metric_stat, into = c("metric", "stat"), sep = "_mean_adj_cv") %>%
   pivot_wider(names_from = scale, values_from = value) %>%
   mutate("pt < 170ha" = partition < `170 ha`,
-         "pt < 75ha" = partition < `75 ha`) %>%
+         "75 < 170" = `75 ha` < `170 ha`,
+         "170 < 650" = `170 ha` < `650 ha`) %>%
   print(n = Inf)
-
 ```
+
+
+Figure showing how average adjusted CV increases as grid size increases across the 15 forest structure metrics
+```{r}
+adjCV_mets %>%
+  filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
+  pivot_longer(cols = c(`75 ha`, `170 ha`, `650 ha`, `study area`), 
+               names_to = "scale", values_to = "value") %>%
+  mutate(scale = factor(scale, levels = c("75 ha", "170 ha", "650 ha", "study area"))) %>%
+  ggplot(aes(x = scale, y = value, group = metric, color = `75 < 170`)) +
+  geom_point(position = position_dodge(width = 0.2), size = 3) +
+  geom_line(position = position_dodge(width = 0.2)) +
+  geom_text(data = . %>% filter(scale == "75 ha"), 
+            aes(label = metric), 
+            hjust = 1.2, 
+            position = position_dodge(width = 0.2), 
+            size = 2.5) +
+  labs(x = "Grid Cell Area", y = "Avg. Coefficient of Variation", 
+       title = "Comparison of Coefficient of Variation across Spatial Scales") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Spatial scales in ecology lit
+
+Using the publications (n = 192) reviewed in Stein et al. (2014) to explore the distribution of spatial scales in ecological research. Taxa include plants (pla), herps (her), invertebrates (inv), birds (bir), and mammals (mam).
+
+```{r}
+stein <- read.csv(file = "data/Stein_supp.csv", header = TRUE)
+head(stein)
+
+stein <- stein[!duplicated(stein$ref),]
+
+stein$taxon <- factor(stein$taxon, 
+                      levels = rev(c("mam", "bir", "inv", "her", "pla", "mix")))
+
+table(stein$taxon)
+
+ggplot(stein, aes(x = factor(grain), fill = taxon)) +
+  geom_bar() +
+  theme_classic() +
+  labs(x = "spatial scale (in sq km)") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_x_discrete(labels = c("1" = "≤ 0.01 ", 
+                              "2" = "0.01 - 1", 
+                              "3" = "1 - 100", 
+                              "4" = "> 100"))
+```
+
