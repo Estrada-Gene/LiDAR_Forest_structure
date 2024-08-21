@@ -2769,20 +2769,46 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("shan_ct","shan_75","shan_
 coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
-ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
+metrics_order <- c("mean.tree.h.sc","rumple.sc","zentropy.sc","lad.max.sc","CRR.rho.sc",
+                   "ClosedGapSpace.sc","vFRcanopy.sc","sd.r.sc","max.height.sc","stem.vol.sc",
+                   "mean.dbh.sc","vzrumple.sc","stand.dens.sc","basal.area.sc","pts.below.2m.sc")
+
+ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_order)), color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
                 position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
                 position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_hline(yintercept = 8.5, color = "grey40") +
+  geom_hline(yintercept = 3.5, color = "grey40") +
   theme_classic() +
   labs(title = "Shannon Diversity Predictors at Different Scales",
        x = "Coefficient Estimate", y = "") +
-  theme(axis.text.y = element_text(hjust = 1),
-        legend.position = "bottom") +
+  theme(axis.text.y = element_text(hjust = 1), legend.position = "bottom",
+        legend.text = element_text(size = 9)) +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlim(-3, 3)
+  xlim(-2.8, 2.4) +
+  annotate("text", x = 1.9, y = 13, label = "opposite direction\n of effects\n (eco. scales\n vs. grid scales)", color = "grey30", size = 3) +
+  annotate("text", x = 1.9, y = 7, label = "same direction\n of effects", color = "grey30", size = 3)  +
+  annotate("text", x = 1.9, y = 2, label = "mixed direction\n of effects", color = "grey30", size = 3) +
+  scale_color_discrete(labels = rev(c("eco: camera trap", "grid: 75 ha",
+                                      "grid: 170 ha", "eco: partition"))) +
+  scale_y_discrete(labels = c("mean.tree.h.sc" = "tree h",
+                              "rumple.sc" = "rumple",
+                              "zentropy.sc" = "vert. pt. dist.",
+                              "lad.max.sc" = "LAD",
+                              "CRR.rho.sc" = "CRR",
+                              "ClosedGapSpace.sc" = "gap vol.",
+                              "vFRcanopy.sc" = "veg. vol. ratio",
+                              "sd.r.sc" = "tree h sd",
+                              "max.height.sc" = "tree h max.",
+                              "stem.vol.sc" = "tree vol.",
+                              "mean.dbh.sc" = "tree dbh",
+                              "vzrumple.sc" = "vert. pt. complex.",
+                              "stand.dens.sc" = "tree density",
+                              "basal.area.sc" = "tree basal area",
+                              "pts.below.2m.sc" = "n pts.<2m"))
 ```
 
 #### Species evenness
@@ -3333,6 +3359,18 @@ metric_list_FD <- c(metric_list, "FRich", "FEven", "FDiver")
 stand_mets$study.area <- 1
 
 #function to calculate adjusted coefficient of variation
+calculate_adj_cv <- function(x) {
+  N <- length(x[!is.na(x)])
+  if (N > 1) {
+    mean_x <- mean(x, na.rm = TRUE)
+    sd_x <- sd(x, na.rm = TRUE)
+    adj_cv <- (1 + 1 / (4 * N)) * (sd_x / mean_x)
+    return(adj_cv)
+  } else {
+    return(NA)
+  }
+}
+
 summarize_adj_cv <- function(data, scale_column) {
   data %>%
     group_by(!!sym(scale_column)) %>%
@@ -3344,8 +3382,11 @@ summarize_adj_cv <- function(data, scale_column) {
 summary_75ha <- summarize_adj_cv(stand_mets, "grid75")
 summary_170ha <- summarize_adj_cv(stand_mets, "grid170")
 summary_650ha <- summarize_adj_cv(stand_mets, "grid650")
-summary_partition <- summarize_adj_cv(stand_mets, "partition")
+summary_partition <- stand_mets %>%
+  mutate(across(c("grid75", "grid170", "grid650", "partition"), as.numeric)) %>%
+  summarize_adj_cv(., "partition")
 summary_all <- summarize_adj_cv(stand_mets, "study.area")
+
 
 #combine
 adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
@@ -3354,12 +3395,15 @@ adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
   summary_partition %>% mutate(scale = "partition"),
   summary_all %>% mutate(scale = "study area")) %>%
   pivot_longer(cols = -scale, names_to = "metric_stat", values_to = "value") %>%
-  separate(metric_stat, into = c("metric", "stat"), sep = "_mean_adj_cv") %>%
+  separate(metric_stat, into = c("metric", "stat"), sep = "_mean") %>%
   pivot_wider(names_from = scale, values_from = value) %>%
-  mutate("pt < 170ha" = partition < `170 ha`,
-         "75 < 170" = `75 ha` < `170 ha`,
-         "170 < 650" = `170 ha` < `650 ha`) %>%
+  mutate("pt<170ha" = partition < `170 ha`,
+         "75<170" = `75 ha` < `170 ha`,
+         "170<650" = `170 ha` < `650 ha`,
+         "650<SA" = `650 ha` < `study area`,
+         "75<SA" = `75 ha` < `study area`) %>%
   print(n = Inf)
+
 ```
 
 
@@ -3370,7 +3414,7 @@ adjCV_mets %>%
   pivot_longer(cols = c(`75 ha`, `170 ha`, `650 ha`, `study area`), 
                names_to = "scale", values_to = "value") %>%
   mutate(scale = factor(scale, levels = c("75 ha", "170 ha", "650 ha", "study area"))) %>%
-  ggplot(aes(x = scale, y = value, group = metric, color = `75 < 170`)) +
+  ggplot(aes(x = scale, y = value, group = metric, color = `75<SA`)) +
   geom_point(position = position_dodge(width = 0.2), size = 3) +
   geom_line(position = position_dodge(width = 0.2)) +
   geom_text(data = . %>% filter(scale == "75 ha"), 
@@ -3403,7 +3447,7 @@ ggplot(stein, aes(x = factor(grain), fill = taxon)) +
   geom_bar() +
   theme_classic() +
   labs(x = "spatial scale (in sq km)") +
-  scale_fill_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set3") +
   scale_x_discrete(labels = c("1" = "≤ 0.01 ", 
                               "2" = "0.01 - 1", 
                               "3" = "1 - 100", 
