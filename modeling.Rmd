@@ -661,7 +661,7 @@ ggplot(pairs_df[!pairs_df$distance == 0,],
               method = "lm", se = FALSE) +
   facet_wrap(~ metric, scales = "free_y") +
   labs(x = "Geographic Distance (m)", y = "Structural Dissimilarity (Euclidean Distance)",
-       color = "forest type", shape = "forest type") +
+       color = "partition", shape = "partition") +
   scale_color_manual(values = c("same" = "blue", "different" = "red")) +
   theme_minimal() +
   theme(legend.position = c(0.8, 0.02),
@@ -670,7 +670,7 @@ ggplot(pairs_df[!pairs_df$distance == 0,],
 ```
 
 
-Comparison table showing intercepts and slopes of the linear models plotted above. 11/15 structure metrics show a lower intercept for the 'same partition' group compared to the 'different partition' group, while 9/15 show lower slope values for the 'same partition' group. 
+Comparison table showing intercepts and slopes of the linear models plotted above. 11/15 structure metrics show a lower intercept for the 'same partition' group compared to the 'different partition' group, while 9/15 show lower slope values for the 'same partition' group. 'inst.s.lt.d' = intercept 'same' less than 'different'. 'slo.s.lt.d' = slope 'same' less than 'different'
 ```{r}
 #list for intercepts and slopes
 model_results <- lapply(metric_list, function(metric_name) {
@@ -704,11 +704,45 @@ model_results <- lapply(metric_list, function(metric_name) {
 (model_results <- do.call(rbind, model_results))
 ```
 
+again for the 170 ha grid for comparison. 8/15 metrics show an intercept lower for within-cell pairs compared to between cells 
+```{r eval=FALSE, include=FALSE}
+#combine distance and similarity data
+pairs_df <- distance_df %>%
+  left_join(similarity_df, by = c("loc1", "loc2")) %>%
+  mutate(
+    same_pt = stand_mets$grid170[as.integer(loc1)] == stand_mets$grid170[as.integer(loc2)],
+    same_pt = ifelse(same_pt, "same", "different"))
 
-Histogram of pairwise distances between scanned locations to see if there are any obvious breaks here that can guide grid size
-```{r}
-hist(distance_df$distance[distance_df$distance > 0], las = 1, 
-     main = "", xlab = "pwd (m)", breaks = 100)
+#list for intercepts and slopes
+model_results2 <- lapply(metric_list, function(metric_name) {
+  metric_df <- pairs_df %>%
+    filter(metric == metric_name & distance != 0)
+
+  model_same <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "same",])
+  model_different <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "different",])
+
+  intercept_same <- coef(model_same)[1]
+  slope_same <- coef(model_same)[2]
+  
+  intercept_different <- coef(model_different)[1]
+  slope_different <- coef(model_different)[2]
+  
+  intercept_comparison <- intercept_same < intercept_different
+  slope_comparison <- slope_same < slope_different
+  
+  data.frame(
+    metric = metric_name,
+    int.same = intercept_same,
+    int.diff = intercept_different,
+    slope.same = slope_same,
+    slope.diff = slope_different,
+    int.s.lt.d = intercept_comparison,
+    slo.s.lt.d = slope_comparison
+  )
+})
+
+#combine into one table
+(model_results2 <- do.call(rbind, model_results2))
 ```
 
 
@@ -971,45 +1005,7 @@ m_filtered <- grid170_cells %>%
 #st_write(final_grid, "medium_grid_170ha.shp")
 ```
 
-One more large sized grid, at 310 ha, not to be modeled.  (65,5)
-```{r} 
-#for large sized grid (~170 ha)
-initial_size <- 85 
-min_cells <- 3
-
-#find appropriate grid size
-result <- find_grid_size(initial_size, min_cells)
-final_grid <- result$grid_sf
-num_cells <- result$num_cells
-as.numeric(st_area(final_grid)[1]) #in m^2
-
-#plot grid
-plot(st_geometry(final_grid), col = "white", border = "grey50", main = "Grid with Survey Locations")
-plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
-
-#how many scanned locations in each grid cell
-grid310 <- st_join(data_sf, final_grid, join = st_within)
-table(grid310$grid_id)
-length(unique(grid310$grid_id))
-
-#add grid designations to stand mets df
-stand_mets <- grid310 %>%
-  st_drop_geometry() %>%
-  dplyr::select(locationID, grid_id) %>%
-  rename(grid310 = grid_id) %>%
-  left_join(stand_mets, .)
-
-#adding grid to full CT list and then to mammal obs table (m)
-grid310_cells <- st_join(ct_sf, final_grid, join = st_within)
-
-m_filtered <- grid310_cells %>%
-  st_drop_geometry() %>%
-  dplyr::select(locationID, grid_id) %>%
-  rename(grid.310 = grid_id) %>%
-  left_join(m_filtered, .)
-```
-
-Again for the grid that I created in ArcGIS - 640 ha 2X2 
+Again for the grid that I created in ArcGIS - 650 ha 2X2 
 ```{r}
 grid650 <- read.csv(file = "data/locationID_grid650.csv", header = TRUE)
 
@@ -1129,7 +1125,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging models
 rich_models_avg <- model.avg(rich_models)
-summary(rich_models_avg)
+#summary(rich_models_avg)
 
 plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
@@ -1175,7 +1171,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging models
 shan_models_avg <- model.avg(shan_models)
-summary(shan_models_avg)
+#summary(shan_models_avg)
 
 plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Diversity - Averaged Model")
 ```
@@ -1220,7 +1216,7 @@ averaged model output - averaging all models
 ```{r}
 #averaging all models
 even_models_avg <- model.avg(even_models)
-summary(even_models_avg)
+#summary(even_models_avg)
 
 plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Evenness - Avg. Model")
 ```
@@ -1267,7 +1263,7 @@ averaged model output - averaging all models
 
 ```{r}
 frich_models_avg <- model.avg(frich_models)
-summary(frich_models_avg)
+#summary(frich_models_avg)
 
 plot(frich_models_avg, full = FALSE, intercept = FALSE, main = "Functional Richness - Avg. Model")
 ```
@@ -1372,7 +1368,7 @@ plot(fdiver_models_avg, full = FALSE, intercept = FALSE, main = "Functional Dive
 
 Plotting variables from models that are at least closely reliable predictors (50% CI's don't overlap zero).
 
-```{r fig.height=9, fig.width=6}
+```{r fig.height=5, fig.width=6}
 #function to extract coefficients and confidence intervals
 extract_coefs <- function(model_avg, model_name) {
   coefs <- as.data.frame(confint(model_avg))
@@ -1401,12 +1397,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with 50% CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
+coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("rich", "shan", "feve", "fdiv")) %>%
+  filter(model %in% c("shan")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -1799,7 +1795,7 @@ plot(fdiver_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FDive
 #### Comparing coefficient plots from averaged models
 
 Only for shannon diveristy and functional models, based on high degree of correlation with the other community metrics
-```{r fig.height=9, fig.width=6}
+```{r fig.height=7, fig.width=6}
 #extract coefficients from averaged models
 coef_rich <- extract_coefs(rich_models_75_avg, "rich")
 coef_shan <- extract_coefs(shan_models_75_avg, "shan")
@@ -2211,7 +2207,7 @@ plot(fdiver_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FDiv
 #### Comparing coefficient plots from averaged models
 
 Showing only richness, shannon, FEven, and FDiver models, since FRich seemingly had nonsense results
-```{r fig.height=9, fig.width=6}
+```{r fig.height=6, fig.width=6}
 #extract coefficients from averaged models
 coef_rich <- extract_coefs(rich_models_170_avg, "rich")
 coef_shan <- extract_coefs(shan_models_170_avg, "shan")
@@ -2613,11 +2609,11 @@ plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE,
 ```
 
 
-#### Comparing coefficient plot from averaged models, reliable predictors only
+#### Comparing coefficient plot from averaged models
 
 Since fric is highly correlated with richness (0.81) it makes sense to ignore this model here. Of the other models that have reliable predictors, the shannon and evenness values are also highly correlated (0.89) and both show vFRcanopy (vegetated volume) as the sole reliable predictor, so I also omit the evenness model here. 
 
-```{r fig.height=9, fig.width=6}
+```{r fig.height=5, fig.width=6}
 #extract coefficients for each averaged model
 coef_rich <- extract_coefs(rich_models_pt_avg, "rich")
 coef_shan <- extract_coefs(shan_models_pt_avg, "shan")
@@ -2634,12 +2630,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_pt_df$model <- factor(coef_pt_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with CI's that don't overlap zero
-coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`2.5 %` <= 0 & coef_pt_df$`97.5 %` >= 0),]
+coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`25 %` <= 0 & coef_pt_df$`75 %` >= 0),]
 coef_pt_df_filter <- coef_pt_df_filter[coef_pt_df_filter$predictor != "(Intercept)",]
 
 #plotting
 coef_pt_df_filter %>%
-  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
+  filter(model %in% c("shan")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -2705,7 +2701,7 @@ cowplot::plot_grid(coefplot1, coefplot2, nrow = 2)
 
 #### Species richness
 
-```{r fig.height=9, fig.width=6}
+```{r eval=FALSE, fig.height=9, fig.width=6, include=FALSE}
 #extract coefficients from averaged models
 coef_rich_ct <- extract_coefs(rich_models_avg, "rich")
 coef_rich_ct$model <- "rich_ct"
@@ -2781,7 +2777,7 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
                 position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
   geom_hline(yintercept = 8.5, color = "grey40") +
-  geom_hline(yintercept = 3.5, color = "grey40") +
+  geom_hline(yintercept = 4.5, color = "grey40") +
   theme_classic() +
   labs(title = "Shannon Diversity Predictors at Different Scales",
        x = "Coefficient Estimate", y = "") +
@@ -2789,9 +2785,9 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
         legend.text = element_text(size = 9)) +
   guides(color = guide_legend(reverse = TRUE)) +
   xlim(-2.8, 2.4) +
-  annotate("text", x = 1.9, y = 13, label = "opposite direction\n of effects\n (eco. scales\n vs. grid scales)", color = "grey30", size = 3) +
-  annotate("text", x = 1.9, y = 7, label = "same direction\n of effects", color = "grey30", size = 3)  +
-  annotate("text", x = 1.9, y = 2, label = "mixed direction\n of effects", color = "grey30", size = 3) +
+  annotate("text", x = 1.9, y = 12, label = "opposite direction\n of effects\n (eco. scales\n vs. grid scales)", color = "grey30", size = 3) +
+  annotate("text", x = 1.9, y = 6.5, label = "same direction\n of effects", color = "grey30", size = 3)  +
+  annotate("text", x = 1.9, y = 2.5, label = "mixed direction\n of effects", color = "grey30", size = 3) +
   scale_color_discrete(labels = rev(c("eco: camera trap", "grid: 75 ha",
                                       "grid: 170 ha", "eco: partition"))) +
   scale_y_discrete(labels = c("mean.tree.h.sc" = "tree h",
@@ -2811,9 +2807,34 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
                               "pts.below.2m.sc" = "n pts.<2m"))
 ```
 
+
+Again for Shannon diversity, but reliable predictors only
+```{r fig.height=7, fig.width=6}
+#again, just showing the reliable predictors
+#select only predictors with 50% CI's that don't overlap zero
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
+coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
+
+coef_df_filter %>%
+  #filter(model %in% c("rich_ct", "rich_pt")) %>%
+ggplot(aes(x = estimate, y = factor(predictor, levels = rev(metrics_order)), color = model)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
+                position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
+                position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  theme_classic() +
+  labs(title = "Shannon Diversity Reliable Predictors at Different Scales",
+       x = "Coefficient Estimate", y = "") +
+  theme(axis.text.y = element_text(hjust = 1), legend.position = "bottom",
+        legend.text = element_text(size = 9)) +
+  guides(color = guide_legend(reverse = TRUE))
+```
+
 #### Species evenness
 
-```{r fig.height=9, fig.width=6}
+```{r eval=FALSE, fig.height=9, fig.width=6, include=FALSE}
 #extract coefficients from averaged models
 coef_even_ct <- extract_coefs(even_models_avg, "even")
 coef_even_ct$model <- "even_ct"
@@ -2854,7 +2875,7 @@ ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
 
 #### Functional richness
 
-```{r fig.height=9, fig.width=6}
+```{r eval=FALSE, fig.height=9, fig.width=6, include=FALSE}
 #extract coefficients from averaged models
 coef_Fric_ct <- extract_coefs(frich_models_avg, "fric")
 coef_Fric_ct$model <- "Fric_ct"
@@ -2896,7 +2917,7 @@ ggplot(aes(x = estimate, y = predictor, color = model)) +
 
 #### Functional evenness
 
-```{r fig.height=9, fig.width=6}
+```{r eval=FALSE, fig.height=9, fig.width=6, include=FALSE}
 #extract coefficients from averaged models
 coef_Feve_ct <- extract_coefs(feven_models_avg, "feve")
 coef_Feve_ct$model <- "Feve_ct"
@@ -2937,7 +2958,7 @@ ggplot(coef_df, aes(x = estimate, y = predictor, color = model)) +
 
 #### Functional divergence
 
-```{r fig.height=9, fig.width=6}
+```{r eval=FALSE, fig.height=9, fig.width=6, include=FALSE}
 #extract coefficients from averaged models
 coef_Fdiv_ct <- extract_coefs(fdiver_models_avg, "fdiv")
 coef_Fdiv_ct$model <- "Fdiv_ct"
@@ -3014,16 +3035,16 @@ pca_var <- summary(pca_result)$importance[2, ]
 fviz_eig(pca_result)
 
 #plot PCA results with ellipses using ggplot2
-ggplot(pca_scores, aes(x = PC1, y = PC2, color = as.factor(ForestType))) +
+ggplot(pca_scores, aes(x = PC1, y = PC2, color = as.factor(partition))) +
   geom_point(size = 3) +
   stat_ellipse(level = 0.95, aes(fill = as.factor(ForestType)), alpha = 0.2, geom = "polygon") +
   theme_classic() +
-  labs(color = "Forest Type", fill = "Forest Type", title = "PCA of Forest Structure Metrics") +
+  labs(color = "partition", fill = "partition", title = "PCA of Forest Structure Metrics") +
   guides(color = guide_legend(reverse = TRUE), fill = guide_legend(reverse = TRUE))
 ```
 
 
-Which structure metrics best differentiate between forest types?
+Which structure metrics best differentiate between locations?
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 fviz_pca_var(pca_result,
              col.var = "contrib",
@@ -3403,12 +3424,11 @@ adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
          "650<SA" = `650 ha` < `study area`,
          "75<SA" = `75 ha` < `study area`) %>%
   print(n = Inf)
-
 ```
 
 
-Figure showing how average adjusted CV increases as grid size increases across the 15 forest structure metrics
-```{r}
+Figure showing how average adjusted coefficient of variation (which controls for number of camera trap locations in each cell) increases as grid size increases across the 15 forest structure metrics. Some metrics reach an asymptote at 170 or 650 ha scale, and don't show more variation even at the study area scale. However, all but one of the metrics (mean dbh; highlighted) increase in variation from the 75 ha to the study area scale.  
+```{r fig.height=7, fig.width=5}
 adjCV_mets %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
   pivot_longer(cols = c(`75 ha`, `170 ha`, `650 ha`, `study area`), 
@@ -3434,14 +3454,14 @@ Using the publications (n = 192) reviewed in Stein et al. (2014) to explore the 
 
 ```{r}
 stein <- read.csv(file = "data/Stein_supp.csv", header = TRUE)
-head(stein)
+#head(stein)
 
 stein <- stein[!duplicated(stein$ref),]
 
 stein$taxon <- factor(stein$taxon, 
                       levels = rev(c("mam", "bir", "inv", "her", "pla", "mix")))
 
-table(stein$taxon)
+#table(stein$taxon)
 
 ggplot(stein, aes(x = factor(grain), fill = taxon)) +
   geom_bar() +
