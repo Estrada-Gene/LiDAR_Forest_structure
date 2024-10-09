@@ -589,7 +589,9 @@ fdp3 <- ggplot(fd_metrics_df, aes(x = habitat, y = FDiver, color = habitat)) +
         legend.position = "none") + 
   scale_color_manual(values = ft_colors)
 
-cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2, nrow = 2, rel_widths = c(.4, .3, .3))
+cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2, nrow = 2, rel_widths = c(.47, .3, .3))
+
+#ggsave("DivMets_by_FT_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
 
 ### Community metrics by elevation
@@ -601,7 +603,7 @@ p1 <- ggplot(div_mets, aes(x = altitude, y = n.all)) +
   geom_smooth() +  
   theme_classic() +
   theme(legend.position = "none") + 
-  labs(title = "", x = "", y = "Richness (n species)")
+  labs(title = "", x = "", y = "Richness")
 
 #shannon diversity by elevation
 p2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = altitude, y = shannon_ct)) +
@@ -609,7 +611,7 @@ p2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = altitude, y = shannon_c
   geom_smooth() +  
   theme_classic() +
   theme(legend.position = "none") + 
-  labs(title = "", x = "", y = "Shannon Diversity Index")
+  labs(title = "", x = "", y = "Shannon Diversity")
 
 #species evenness by elevation
 p3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = altitude, y = div_even)) +
@@ -617,7 +619,7 @@ p3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = altitude, y = div_even)) 
   geom_smooth() +  
   theme_classic() +
   theme(legend.position = "none") + 
-  labs(title = "", x = "", y = "Evenness Index")
+  labs(title = "", x = "", y = "Evenness")
 
 #functional richness
 p4 <- ggplot(fd_metrics_df, aes(x = altitude, y = FRich)) +
@@ -642,6 +644,8 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver)) +
   labs(title = "", x = "elevation (m)", y = "Func. Diver.")
 
 cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
+
+#ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
 
 
@@ -3680,10 +3684,10 @@ adjCV_partition <- summarize_adj_cv2(stand_mets, "partition") %>% mutate(scale =
 
 
 #combine
-adjCV_mets <- bind_rows(adjCV_75ha, adjCV_170ha, adjCV_650ha, adjCV_study_area, adjCV_partition)
+adjCV_mets2 <- bind_rows(adjCV_75ha, adjCV_170ha, adjCV_650ha, adjCV_study_area, adjCV_partition)
 
 #prep data for plotting
-adjCV_mets_long <- adjCV_mets %>%
+adjCV_mets_long2 <- adjCV_mets2 %>%
   pivot_longer(cols = starts_with("adj_cv_"), 
                names_to = "metric", 
                values_to = "value", 
@@ -3706,7 +3710,7 @@ adjCV_mets_long <- adjCV_mets %>%
                                "pts.below.2m" = "n pts<2m"))
 
 #plot
-adjCV_mets_long %>%
+adjCV_mets_long2 %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
   mutate(scale = factor(scale, levels = c("75 ha", "170 ha", "650 ha", "study area", "partition"))) %>%
   ggplot(aes(x = scale, y = value, group = metric)) +
@@ -3753,5 +3757,33 @@ ggplot(stein, aes(x = factor(grain), fill = taxon)) +
                               "2" = "0.01 - 1", 
                               "3" = "1 - 100", 
                               "4" = "> 100"))
+```
+
+Creating species table with observation counts and characteristic data used for FD metrics
+```{r}
+fd <- read.csv(file = "data/fd_chars.csv", header = TRUE, fileEncoding = "ISO-8859-1")
+obsbyft <- read.csv(file = "data/obs_by_ft.csv", header = TRUE)
+
+fd$Species <- fd$Species.name
+fd <- fd[, !(names(fd) %in% "Species.name")]
+
+obsbyft <- obsbyft[obsbyft$Species != 'Tupaia longipes (glis)',]
+
+
+setdiff(fd$Species, obsbyft$Species)
+obsbyft$Species[obsbyft$Species == "Family Muridae (unid. rats)"] <- "Family Muridae"
+obsbyft$Species[obsbyft$Species == "Family Soricidae (unid. shrews)"] <- "Family Soricidae"
+
+new_table <- left_join(obsbyft[,c("Species", "Total")], fd)
+
+new_table$Activity.Cycle..[new_table$Activity.Cycle.. == 1 & !is.na(new_table$Activity.Cycle..)] <- "nocturnal"
+new_table$Activity.Cycle..[new_table$Activity.Cycle.. == 2 & !is.na(new_table$Activity.Cycle..)] <- "crepuscular"
+new_table$Activity.Cycle..[new_table$Activity.Cycle.. == 3 & !is.na(new_table$Activity.Cycle..)] <- "diurnal"
+
+new_table$Trophic.Level[new_table$Trophic.Level == 1 & !is.na(new_table$Trophic.Level)] <- "herbivore"
+new_table$Trophic.Level[new_table$Trophic.Level == 2 & !is.na(new_table$Trophic.Level)] <- "omnivore"
+new_table$Trophic.Level[new_table$Trophic.Level == 3 & !is.na(new_table$Trophic.Level)] <- "carnivore"
+
+#write.csv(new_table, file = "tableS1.csv")
 ```
 
