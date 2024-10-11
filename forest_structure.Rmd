@@ -742,9 +742,9 @@ sd_h <- sd(tree_mets$h, na.rm = TRUE)
 
 t1 <- ggplot(tree_mets, aes(h)) +
   geom_histogram(bins = 100) +
-  #geom_vline(aes(xintercept = mean_h), color = "grey20", size = 1) +
-  #geom_vline(aes(xintercept = mean_h + sd_h), color = "grey", linetype = "dashed", size = 0.8) +
-  #geom_vline(aes(xintercept = mean_h - sd_h), color = "grey", linetype = "dashed", size = 0.8) +
+  geom_vline(aes(xintercept = mean_h), color = "grey10", size = 1) +
+  geom_vline(aes(xintercept = mean_h + sd_h), color = "grey", linetype = "dashed", size = 0.8) +
+  geom_vline(aes(xintercept = mean_h - sd_h), color = "grey", linetype = "dashed", size = 0.8) +
   #annotate("text", x = 45, y = 35, label = paste("mean:", round(mean_h, 2), 
   #                                              "\nSD:", round(sd_h, 2)),
   #         hjust = 0.8, size = 4, color = "grey10") +
@@ -758,13 +758,13 @@ sd_dbh <- sd(tree_mets$dbh, na.rm = TRUE)
 
 t2 <- ggplot(tree_mets, aes(dbh)) +
   geom_histogram(bins = 100) +
-  #geom_vline(aes(xintercept = mean_dbh), color = "grey20", size = 1) +
-  #geom_vline(aes(xintercept = mean_dbh + sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
-  #geom_vline(aes(xintercept = mean_dbh - sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
+  geom_vline(aes(xintercept = mean_dbh), color = "grey10", size = 1) +
+  geom_vline(aes(xintercept = mean_dbh + sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
+  geom_vline(aes(xintercept = mean_dbh - sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
   #annotate("text", x = 100, y = 92, label = paste("mean:", round(mean_dbh, 2), 
   #                                                  "\nSD:", round(sd_dbh, 2)),
   #         hjust = 0.8, size = 4, color = "grey10") +
-  labs(title = "tree diameter", x = "DBH (cm)", y = "") +
+  labs(title = "tree dbh", x = "diameter (cm)", y = "") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -774,10 +774,10 @@ sd_v <- sd(tree_mets$v, na.rm = TRUE)
 
 t3 <- ggplot(tree_mets, aes(v)) +
   geom_histogram(bins = 100) +
-  #geom_vline(aes(xintercept = mean_v), color = "grey20", size = 1) +
-  #geom_vline(aes(xintercept = mean_v + sd_v), color = "grey", linetype = "dashed", size = 0.8) +
-  #geom_vline(aes(xintercept = mean_v - sd_v), color = "grey", linetype = "dashed", size = 0.8) +
-  #annotate("text", x = 10, y = 400, label = paste("mean:", round(mean_v, 2), 
+  geom_vline(aes(xintercept = mean_v), color = "grey10", size = 1) +
+  geom_vline(aes(xintercept = mean_v + sd_v), color = "grey", linetype = "dashed", size = 0.8) +
+  geom_vline(aes(xintercept = mean_v - sd_v), color = "grey", linetype = "dashed", size = 0.8) +
+  #annotate("text", x = 1.5, y = 400, label = paste("mean:", round(mean_v, 2), 
   #                                                  "\nSD:", round(sd_v, 2)),
   #         hjust = 0.8, size = 2, color = "grey10") +
   labs(title = "tree volume", x = expression(volume~(m^3)), y = "") +
@@ -785,68 +785,19 @@ t3 <- ggplot(tree_mets, aes(v)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   xlim(0,2)
 
-cowplot::plot_grid(t1, t2, t3, nrow = 1)
-```
+#ggsave("tree_mets_hists.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
 
+#trying a plot with a 4th pane to show trees with volume > 2 m3
+t4 <- ggplot(tree_mets, aes(v)) +
+  geom_histogram(bins = 100) +
+  labs(title = "tree volume", x = expression(volume~(m^3)), y = "") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(2, max(tree_mets$v))
 
-### by forest type 
-```{r}
-#tree heights
-ggplot(tree_mets, aes(x = habitat, y = h)) +
-  geom_violin() +
-  geom_boxplot(width = 0.3) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "tree height", x = "", y = "height (m)") + 
-  coord_flip() + 
-  theme_classic()
+cowplot::plot_grid(t1, t2, t3, t4, nrow = 1)
 
-#tree dbh
-ggplot(tree_mets, aes(x = habitat, y = dbh)) +
-  geom_violin() +
-  geom_boxplot(width = 0.3) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "tree diameter", x = "", y = "dbh (cm)") + 
-  coord_flip() + 
-  theme_classic()
-
-#tree volume
-ggplot(tree_mets, aes(x = habitat, y = v)) +
-  geom_violin() +
-  geom_boxplot(width = 0.2) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "tree volume", x = "", y = expression(volume~(m^3))) + 
-  coord_flip() + 
-  theme_classic()
-```
-
-### by partition
-```{r}
-#tree heights
-ggplot(tree_mets, aes(x = partition, y = h)) +
-  geom_violin() +
-  geom_boxplot(width = 0.3) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "Tree Heights", x = "", y = "height (m)") + 
-  coord_flip() + 
-  theme_classic()
-
-#tree dbh
-ggplot(tree_mets, aes(x = partition, y = dbh)) +
-  geom_violin() +
-  geom_boxplot(width = 0.3) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "Diameter at Breast Height", x = "", y = "dbh (cm)") + 
-  coord_flip() + 
-  theme_classic()
-
-#tree volume
-ggplot(tree_mets, aes(x = partition, y = v)) +
-  geom_violin() +
-  geom_boxplot(width = 0.2) +
-  #geom_jitter(width = 0.1) + 
-  labs(title = "Tree Volumes", x = "", y = expression(volume~(m^3))) + 
-  coord_flip() + 
-  theme_classic()
+#ggsave("tree_mets_hists2.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
 ```
 
 
@@ -856,7 +807,10 @@ ggplot(tree_mets, aes(x = partition, y = v)) +
 t1 <- ggplot(tree_mets, aes(x = altitude, y = h)) +
   geom_point() +
   geom_smooth(se = TRUE) +
-  labs(title = "tree height", x = "elevation (m)", y = "height (m)") + 
+  #geom_hline(aes(yintercept = mean_h), color = "grey10", size = 1) +
+  #geom_hline(aes(yintercept = mean_h + sd_h), color = "grey", linetype = "dashed", size = 0.8) +
+  #geom_hline(aes(yintercept = mean_h - sd_h), color = "grey", linetype = "dashed", size = 0.8) +
+  labs(title = "tree height", x = "", y = "height (m)") + 
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -864,7 +818,10 @@ t1 <- ggplot(tree_mets, aes(x = altitude, y = h)) +
 t2 <- ggplot(tree_mets, aes(x = altitude, y = dbh)) +
   geom_point() +
   geom_smooth(se = TRUE) +
-  labs(title = "tree diameter", x = "elevation (m)", y = "dbh (cm)") + 
+  #geom_hline(aes(yintercept = mean_dbh), color = "grey10", size = 1) +
+  #geom_hline(aes(yintercept = mean_dbh + sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
+  #geom_hline(aes(yintercept = mean_dbh - sd_dbh), color = "grey", linetype = "dashed", size = 0.8) +
+  labs(title = "tree dbh", x = "elevation (m)", y = "diameter (cm)") + 
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -872,9 +829,12 @@ t2 <- ggplot(tree_mets, aes(x = altitude, y = dbh)) +
 t3 <- ggplot(tree_mets, aes(x = altitude, y = v)) +
   geom_point() +
   geom_smooth(se = TRUE) +
-  labs(title = "tree volume", x = "elevation (m)", y = expression(volume~(m^3))) + 
-  theme_classic()
-  theme(plot.title = element_text(hjust = 0.5))
+  labs(title = "tree volume", x = "", y = expression(volume~(m^3))) + 
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  ylim(0, 2)
 
 cowplot::plot_grid(t1, t2, t3, nrow = 1)
+
+#ggsave("tree_mets_elev.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
 ```
