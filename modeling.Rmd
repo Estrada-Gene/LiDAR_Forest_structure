@@ -1,5 +1,5 @@
 ---
-title: "modeling terrestrial and arboreal mammals at GPNP"
+title: "modeling terrestrial mammal diversity at GPNP"
 author: "Gene Estrada"
 date: "2024-05-21"
 output: html_document
@@ -35,7 +35,7 @@ library(spmoran)
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
 m <- m[,-1]
 
-#adding updated CT location forest type and partition data
+#camera trap location forest type and partition data
 ct <- read.csv(file = "data/CTlocations_partitions_May2024.csv", header = TRUE)
 
 #removing lat, long, and habitat designations and adding updated versions
@@ -50,12 +50,6 @@ m$habitat <- factor(m$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "All
 m$partition <- factor(m$partition, levels = c("PS1", "FS1", "AB1", "AB2",
                                           "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
                     ordered = TRUE)
-
-#species observation summary table
-#species_table <- as.data.frame(table(m$Species, m$habitat))
-#species_table <- pivot_wider(species_table, names_from = "Var2", values_from = "Freq")
-#colnames(species_table)[colnames(species_table) == 'Var1'] <- 'Species'
-#write.csv(species_table, file = "species_observation_table_byFT.csv")
 
 #LiDAR-derived metrics from {FORTLS} and {lidRmetrics}
 stand_mets <- read.csv(file = "data/select.stand.mets.csv", header = TRUE)
@@ -118,21 +112,8 @@ m %>%
   summarise(SpeciesRichness = n_distinct(Species))
 ```
 
-Compared to only CT locations that have LiDAR data: 34 total species
-
-```{r}
-#only camera trap locations that have LiDAR scan data
-m %>%
-  filter(locationID %in% stand_mets$locationID & 
-           Terrestriality == 1 &
-         !Species %in% unid_taxa) %>%
-  summarise(SpeciesRichness = n_distinct(Species))
-```
 
 ### By forest type
-
-Excluding arboreal mammals
-
 ```{r}
 #all ct locations
 n_by_ft <- m %>%
@@ -141,27 +122,9 @@ n_by_ft <- m %>%
          !Species %in% unid_taxa) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(habitat))
-
-#only scanned locations
-n_by_ft <- m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  group_by(habitat) %>%
-  filter(Terrestriality == 1 &
-         !Species %in% unid_taxa) %>%
-  summarise(n.scanned = n_distinct(Species)) %>%
-  left_join(n_by_ft) %>%
-  arrange(desc(habitat))
-
-#the scanned sites consistently observe fewer species over the study period by 4 - 10 species
-#more bias in the higher elevation FT's, especially the montane
-n_by_ft$diff <- n_by_ft$n.all - n_by_ft$n.scanned
-n_by_ft
 ```
 
 ### By partition
-
-Excluding unid animals
-
 ```{r}
 #all ct locations
 n_by_pt <- m %>%
@@ -170,25 +133,9 @@ n_by_pt <- m %>%
          !Species %in% unid_taxa) %>%
   summarise(n.all = n_distinct(Species)) %>%
   arrange(desc(partition))
-
-#only scanned locations
-n_by_pt <- m %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  group_by(partition) %>%
-  filter(Terrestriality == 1 &
-         !Species %in% unid_taxa) %>%
-  summarise(n.scanned = n_distinct(Species)) %>%
-  left_join(n_by_pt) %>%
-  arrange(desc(partition))
-
-#the scanned sites consistently observe fewer species but this is especially true in UG1 and LS2
-n_by_pt$diff <- n_by_pt$n.all - n_by_pt$n.scanned
-n_by_pt
-
 ```
 
 Again, but for terrestrial mammals only
-
 ```{r}
 #filtering
 m_filtered <- m %>%
@@ -200,54 +147,23 @@ ct_div_mets_terr <- m_filtered %>%
   group_by(partition) %>%
   summarise(n.terr = n_distinct(Species)) %>%
   arrange(desc(partition))
-
-#by aggregated montane partition - combining MO1 and MO2 into one 'partition"
-#ct_div_mets_terr_mod <- m_filtered %>%
- # mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition))) %>%
-  #group_by(partition) %>%
-  #summarise(n.terr = n_distinct(Species)) %>%
-  #arrange(desc(partition))
 ```
 
 ### By camera trap location
-
-Excluding arboreal mammals
-
 ```{r}
 #all CT locations
 n_by_ct <- m_filtered %>%
   group_by(locationID) %>%
   summarise(n.all = n_distinct(Species))
-
-#compare 'all CT' and 'scanned CT' location richness distributions
-#the 'scanned CT' locations seem biased towards higher species richness
-hist(n_by_ct$n.all, breaks = 25,
-     main = "species richness - all ct locations", xlab = "n species")
-summary(n_by_ct$n.all)
-
-hist(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID], breaks = 20,
-     main = "species richness - scanned ct locations only", xlab = "n species")
-summary(n_by_ct$n.all[n_by_ct$locationID %in% stand_mets$locationID])
 ```
 
 ## SHANNON DIVERSITY
 
 ### By camera trap location
-
 ```{r}
 shannon_ct <- diversity(table(m_filtered$locationID, m_filtered$Species), index = "shannon")
 shannon_ct <- rownames_to_column(as.data.frame(shannon_ct), var = "locationID")
 shannon_ct$locationID <- as.integer(shannon_ct$locationID)
-
-#compare 'all CT' and 'scanned CT' location Shannon Diversity value distributions
-#the 'scanned CT' locations seem only slightly biased towards higher diversity values
-hist(shannon_ct$shannon_ct, breaks = 25, xlim = c(0,3),
-     main = "species diversity - all ct locations", xlab = "Shannon Diversity Index")
-summary(shannon_ct$shannon_ct)
-
-hist(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID], breaks = 25, xlim = c(0,3),
-     main = "species diversity - scanned ct locations only", xlab = "Shannon Diversity Index")
-summary(shannon_ct$shannon_ct[shannon_ct$locationID %in% stand_mets$locationID])
 ```
 
 ### By partition
