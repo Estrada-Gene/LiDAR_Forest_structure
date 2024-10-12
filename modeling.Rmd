@@ -602,7 +602,8 @@ p1 <- ggplot(div_mets, aes(x = altitude, y = n.all)) +
   geom_point() +
   geom_smooth() +  
   theme_classic() +
-  theme(legend.position = "none") + 
+  theme(legend.position = "none",
+        axis.text.x = element_blank()) + 
   labs(title = "", x = "", y = "Richness")
 
 #shannon diversity by elevation
@@ -610,7 +611,8 @@ p2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = altitude, y = shannon_c
   geom_point() +
   geom_smooth() +  
   theme_classic() +
-  theme(legend.position = "none") + 
+  theme(legend.position = "none",
+        axis.text.x = element_blank()) + 
   labs(title = "", x = "", y = "Shannon Diversity")
 
 #species evenness by elevation
@@ -618,7 +620,8 @@ p3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = altitude, y = div_even)) 
   geom_point() +
   geom_smooth() +  
   theme_classic() +
-  theme(legend.position = "none") + 
+  theme(legend.position = "none",
+        axis.text.x = element_blank()) + 
   labs(title = "", x = "", y = "Evenness")
 
 #functional richness
@@ -645,7 +648,7 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver)) +
 
 cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 
-#ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
+ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
 
 
@@ -3528,6 +3531,8 @@ p2 <- ggplot(grid_int[grid_int$grid_size == 170,],
   theme(plot.title = element_text(hjust = 0.5))
 
 cowplot::plot_grid(p1, p2,nrow = 1, rel_widths = c(.4, .55))
+
+#ggsave("spatial_hetero.jpg", plot = last_plot(), width = 7.5, height = 6, dpi = 500, device = "jpeg")
 ```
 
 
@@ -3627,6 +3632,8 @@ adjCV_mets %>%
                               "170 ha" = expression("1.7 km"^2), 
                               "650 ha" = expression("6.5 km"^2), 
                               "study area" = expression("study area (26 km"^2*")")))
+
+ggsave("adjCV_scales.jpg", plot = last_plot(), width = 6.5, height = 8, dpi = 500, device = "jpeg")
 ```
 
 
