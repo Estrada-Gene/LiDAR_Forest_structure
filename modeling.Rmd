@@ -564,7 +564,7 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver)) +
 
 cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 
-ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
+#ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
 
 
@@ -895,6 +895,9 @@ plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
 grid75 <- st_join(data_sf, final_grid, join = st_within)
 table(grid75$grid_id)
 length(unique(grid75$grid_id))
+mean(table(grid75$grid_id))
+sd(table(grid75$grid_id))
+
 
 #add grid designations to stand mets df
 stand_mets <- grid75 %>%
@@ -935,6 +938,8 @@ plot(st_geometry(data_sf), add = TRUE, col = "grey30", pch = 16)
 grid170 <- st_join(data_sf, final_grid, join = st_within)
 table(grid170$grid_id)
 length(unique(grid170$grid_id))
+mean(table(grid170$grid_id))
+sd(table(grid170$grid_id))
 
 #add grid designations to stand mets df
 stand_mets <- grid170 %>%
@@ -3549,7 +3554,7 @@ adjCV_mets %>%
                               "650 ha" = expression("6.5 km"^2), 
                               "study area" = expression("study area (26 km"^2*")")))
 
-ggsave("adjCV_scales.jpg", plot = last_plot(), width = 6.5, height = 8, dpi = 500, device = "jpeg")
+#ggsave("adjCV_scales.jpg", plot = last_plot(), width = 6.5, height = 8, dpi = 500, device = "jpeg")
 ```
 
 
