@@ -898,7 +898,6 @@ length(unique(grid75$grid_id))
 mean(table(grid75$grid_id))
 sd(table(grid75$grid_id))
 
-
 #add grid designations to stand mets df
 stand_mets <- grid75 %>%
   st_drop_geometry() %>%
@@ -1458,6 +1457,14 @@ grid75_mets <- stand_mets %>%
   rename(grid.75 = grid75) %>%
   dplyr::select(-eigenvectors.sc) %>%
   left_join(grid75_mets, .)
+
+#add number of scanned locations to df
+as.data.frame(table(grid75$grid_id)) %>%
+  rename(grid.75 = Var1,
+         n.scanned = Freq) %>%
+  mutate(grid.75 = as.numeric(as.character(grid.75))) %>%
+  left_join(grid75_mets, ., by = "grid.75")
+
 ```
 
 Correlation of community metrics. Richness is highly correlated with FRich and FDiver, and shannon is highly correlated with evenness. So probably should only keep shannon and the functional metrics. 
@@ -1482,7 +1489,7 @@ Fitting global model then using {dredge} to find models of best fit.
 Top model summary output. Restricting models to two predictors to avoid overfitting
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#removing MO1 partition since no structure mets are from this pt
+#removing cells without structure metrics
 grid75_mets <- grid75_mets[complete.cases(grid75_mets),]
 
 #fitting global model for use in dredge
