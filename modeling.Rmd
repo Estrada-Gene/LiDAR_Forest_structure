@@ -1459,12 +1459,11 @@ grid75_mets <- stand_mets %>%
   left_join(grid75_mets, .)
 
 #add number of scanned locations to df
-as.data.frame(table(grid75$grid_id)) %>%
+grid75_mets <- as.data.frame(table(grid75$grid_id)) %>%
   rename(grid.75 = Var1,
          n.scanned = Freq) %>%
   mutate(grid.75 = as.numeric(as.character(grid.75))) %>%
   left_join(grid75_mets, ., by = "grid.75")
-
 ```
 
 Correlation of community metrics. Richness is highly correlated with FRich and FDiver, and shannon is highly correlated with evenness. So probably should only keep shannon and the functional metrics. 
@@ -1512,6 +1511,7 @@ rm_75 <- glm(n.all ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned, #controlling for number of scanned locations/cell
            data = grid75_mets)
 
 #dredge
@@ -1557,6 +1557,7 @@ sm_75 <- glm(shannon_75 ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid75_mets)
 
 #dredge
@@ -1882,6 +1883,13 @@ grid170_mets <- stand_mets %>%
   rename(grid.170 = grid170) %>%
   dplyr::select(-eigenvectors.sc) %>%
   left_join(grid170_mets, .)
+
+#add number of scanned locations to df
+grid170_mets <- as.data.frame(table(grid170$grid_id)) %>%
+  rename(grid.170 = Var1,
+         n.scanned = Freq) %>%
+  mutate(grid.170 = as.numeric(as.character(grid.170))) %>%
+  left_join(grid170_mets, ., by = "grid.170")
 ```
 
 Correlation of community metrics. Richness is highly correlated with FRich (0.87) and shannon is highly correlated with evenness (0.93). So probably should only keep shannon and the functional metrics. 
@@ -1974,10 +1982,11 @@ sm_170 <- glm(shannon_170 ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
-shan_170_models <- dredge(sm_170, m.max = 2, extra = "adjR^2",
+shan_170_models <- dredge(sm_170, m.max = 2, extra = c("adjR^2", "deviance"),
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -1987,6 +1996,9 @@ shan_170_models <- dredge(sm_170, m.max = 2, extra = "adjR^2",
 #R-squared information
 summary(shan_170_models$`adjR^2`)
 #summary(shan_170_models$`adjR^2`[shan_170_models$delta < 2])
+
+#deviance
+summary(shan_170_models$deviance)
 ```
 
 averaged model output - averaging all models
@@ -2255,6 +2267,12 @@ ct_div_mets_terr <- ct %>%
   summarise(effort = sum(act.days, na.rm = TRUE)) %>%
   filter(!partition == "Kerangas") %>%
   left_join(ct_div_mets_terr)
+
+#adding count of scanned locations 
+ct_div_mets_terr <- as.data.frame(table(data_sf$partition)) %>%
+  rename(partition = Var1,
+         n.scanned = Freq) %>%
+  left_join(ct_div_mets_terr, ., by = "partition")
 ```
 
 #### Check correlation between outcome variables and predictors.
@@ -2364,9 +2382,10 @@ sm_pt1 <- glm(Shannon ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = "adjR^2",
+shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = c("adjR^2", "deviance"),
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -2376,11 +2395,10 @@ shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = "adjR^2",
 
 #R-squared information
 summary(shan_pt_models$`adjR^2`)
-summary(shan_pt_models$`adjR^2`[shan_pt_models$delta < 2])
+#summary(shan_pt_models$`adjR^2`[shan_pt_models$delta < 2])
 
-#selecting top model by AIC
-#top_shan_pt_model <- get.models(shan_pt_models, subset = 1)
-#summary(top_shan_pt_model[[1]])
+#deviance
+summary(shan_pt_models$deviance)
 ```
 
 averaged model output - averaging all models
