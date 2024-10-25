@@ -971,7 +971,7 @@ stand_mets <- grid650 %>%
 ```
 
 
-## MODELING - Terrestrial mammals (CT data)
+## MODELING
 
 ```{r}
 #scale and center numeric predictors
@@ -1357,12 +1357,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with 50% CI's that don't overlap zero
-coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
+coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("shan")) %>%
+  filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -1607,6 +1607,7 @@ em_75 <- glm(even.75 ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid75_mets)
 
 #dredge
@@ -1652,6 +1653,7 @@ fr_75 <- glm(FRich ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid75_mets)
 
 #dredge
@@ -1697,6 +1699,7 @@ fe_75 <- glm(FEven ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid75_mets)
 
 #dredge
@@ -1742,6 +1745,7 @@ fd_75 <- glm(FDiver ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid75_mets)
 
 #dredge
@@ -1790,7 +1794,7 @@ coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)",
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
+  filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -1933,6 +1937,7 @@ rm_170 <- glm(n.all ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
@@ -2035,6 +2040,7 @@ em_170 <- glm(even.170 ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
@@ -2085,6 +2091,7 @@ fr_170 <- glm(FRich ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
@@ -2133,6 +2140,7 @@ fe_170 <- glm(FEven ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
@@ -2181,6 +2189,7 @@ fd_170 <- glm(FDiver ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(act.days),
+           weights = n.scanned,
            data = grid170_mets)
 
 #dredge
@@ -2232,7 +2241,7 @@ coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)",
 
 #plotting - only the functional models for now
 coef_df_filter %>%
-  filter(model %in% c("rich", "shan", "fdiv", "feve")) %>%
+  filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -2326,6 +2335,7 @@ rm_pt1 <- glm(n.terr ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 
 #dredge
@@ -2438,6 +2448,7 @@ em_pt1 <- glm(evenness ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
 even_pt_models <- dredge(em_pt1, m.max = 2, extra = "adjR^2",
@@ -2494,6 +2505,7 @@ frich_pt <- glm(FRich ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
 frich_pt_models <- dredge(frich_pt, m.max = 2, extra = "adjR^2",
@@ -2550,6 +2562,7 @@ feven_pt <- glm(FEven ~
            na.action = na.fail,
            family = Gamma(link = "log"), 
            offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
 feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "adjR^2",
@@ -2605,7 +2618,8 @@ fdiver_pt <- glm(FDiver ~
              ClosedGapSpace.sc,
            na.action = na.fail,
            family = Gamma(link = "log"), 
-           #offset = log(effort),
+           offset = log(effort),
+           weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
 fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "adjR^2",
@@ -2658,12 +2672,12 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 coef_pt_df$model <- factor(coef_pt_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
 #select only predictors with CI's that don't overlap zero
-coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`25 %` <= 0 & coef_pt_df$`75 %` >= 0),]
+coef_pt_df_filter <- coef_pt_df[!(coef_pt_df$`2.5 %` <= 0 & coef_pt_df$`97.5 %` >= 0),]
 coef_pt_df_filter <- coef_pt_df_filter[coef_pt_df_filter$predictor != "(Intercept)",]
 
 #plotting
 coef_pt_df_filter %>%
-  filter(model %in% c("shan")) %>%
+  filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
