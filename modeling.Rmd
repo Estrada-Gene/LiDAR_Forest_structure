@@ -1065,14 +1065,12 @@ rm1 <- glm(n.all ~
            offset = log(act.days),
            data = stand_mets)
 #dredge
-rich_models <- dredge(rm1, m.max = 3, 
+rich_models <- dredge(rm1, m.max = 3, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
-
-#selecting top model by AIC
-#top_rich_model <- get.models(rich_models, subset = 1)
-#summary(top_rich_model[[1]])
+#deviance
+rich_models
 ```
 
 averaged model output - averaging all models
@@ -1112,18 +1110,13 @@ shannon_model <- glm(shannon_ct ~
                         offset = log(act.days),
                         data = stand_mets)
 #dredge
-shan_models <- dredge(shannon_model, m.max = 3, extra = "adjR^2",
+shan_models <- dredge(shannon_model, m.max = 3, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
 
-#R-squared information
-summary(shan_models$`adjR^2`)
-#summary(shan_models$`adjR^2`[shan_models$delta < 2])
-
-#selecting top model by AIC
-#top_shan_model <- get.models(shan_models, subset = 1)
-#summary(top_shan_model[[1]])
+#deviance
+shan_models
 ```
 
 averaged model output - averaging all models
@@ -1161,14 +1154,13 @@ even_model <- glm(div_even ~
               offset = log(act.days),
               data = stand_mets)
 #dredge
-even_models <- dredge(even_model, m.max = 3, 
+even_models <- dredge(even_model, m.max = 3, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
 
-#selecting top model by AIC
-#top_even_model <- get.models(even_models, subset = 1)
-#summary(top_even_model[[1]])
+#deviance
+even_models
 ```
 
 averaged model output - averaging all models
@@ -1210,13 +1202,12 @@ frich_model <- glm(FRich ~
               offset = log(act.days),      
               data = stand_mets_FD)
 #dredge
-frich_models <- dredge(frich_model, m.max = 2, 
+frich_models <- dredge(frich_model, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
-#selecting top model by AIC
-#top_frich_model <- get.models(frich_models, subset = 1)
-#summary(top_frich_model[[1]])
+#deviance
+frich_models
 ```
 
 averaged model output - averaging all models
@@ -1254,13 +1245,12 @@ feven_model <- glm(FEven ~
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-feven_models <- dredge(feven_model, m.max = 2, 
+feven_models <- dredge(feven_model, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
 
-#selecting top model by AIC
-#top_feven_model <- get.models(feven_models, subset = 1)
-#summary(top_feven_model[[1]])
+#deviance
+feven_models
 ```
 
 averaged model output - averaging all models
@@ -1302,14 +1292,13 @@ fdiver_model <- glm(FDiver ~
               offset = log(act.days),
               data = stand_mets_FD)
 #dredge
-fdiver_models <- dredge(fdiver_model, m.max = 3, 
+fdiver_models <- dredge(fdiver_model, m.max = 3, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
 
-#selecting top model by AIC
-#top_fdiver_model <- get.models(fdiver_models, subset = 1)
-#summary(top_fdiver_model[[1]])
+#deviance
+fdiver_models
 ```
 
 averaged model output - averaging all models
@@ -1515,12 +1504,14 @@ rm_75 <- glm(n.all ~
            data = grid75_mets)
 
 #dredge
-rich_75_models <- dredge(rm_75, m.max = 2, 
+rich_75_models <- dredge(rm_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
+#deviance
+rich_75_models
 ```
 
 averaged model output - averaging all models
@@ -1561,16 +1552,15 @@ sm_75 <- glm(shannon_75 ~
            data = grid75_mets)
 
 #dredge
-shan_75_models <- dredge(sm_75, m.max = 2, extra = "adjR^2",
+shan_75_models <- dredge(sm_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 
-#R-squared information
-summary(shan_75_models$`adjR^2`)
-#summary(shan_75_models$`adjR^2`[shan_75_models$delta < 2])
+#deviance
+shan_75_models
 ```
 
 averaged model output - averaging all models
@@ -1611,12 +1601,14 @@ em_75 <- glm(even.75 ~
            data = grid75_mets)
 
 #dredge
-even_75_models <- dredge(em_75, m.max = 2, 
+even_75_models <- dredge(em_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
+#deviance
+even_75_models
 ```
 
 averaged model output - averaging all models
@@ -1703,12 +1695,14 @@ fe_75 <- glm(FEven ~
            data = grid75_mets)
 
 #dredge
-feven_75_models <- dredge(fe_75, m.max = 2, 
+feven_75_models <- dredge(fe_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
+#deviance
+feven_75_models
 ```
 
 averaged model output - averaging all models
@@ -1749,12 +1743,14 @@ fd_75 <- glm(FDiver ~
            data = grid75_mets)
 
 #dredge
-fdiver_75_models <- dredge(fd_75, m.max = 2, 
+fdiver_75_models <- dredge(fd_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
+#deviance
+fdiver_75_models
 ```
 
 averaged model output - averaging all models
@@ -1941,15 +1937,15 @@ rm_170 <- glm(n.all ~
            data = grid170_mets)
 
 #dredge
-rich_170_models <- dredge(rm_170, m.max = 2, extra = "adjR^2",
+rich_170_models <- dredge(rm_170, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(lad.max.sc && rumple.sc))
 
-#R-squared information
-summary(rich_170_models$`adjR^2`)
+#deviance information
+rich_170_models
 ```
 
 averaged model output - averaging all models
@@ -1991,19 +1987,15 @@ sm_170 <- glm(shannon_170 ~
            data = grid170_mets)
 
 #dredge
-shan_170_models <- dredge(sm_170, m.max = 2, extra = c("adjR^2", "deviance"),
+shan_170_models <- dredge(sm_170, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(lad.max.sc && rumple.sc))
 
-#R-squared information
-summary(shan_170_models$`adjR^2`)
-#summary(shan_170_models$`adjR^2`[shan_170_models$delta < 2])
-
 #deviance
-summary(shan_170_models$deviance)
+shan_170_models
 ```
 
 averaged model output - averaging all models
@@ -2044,15 +2036,15 @@ em_170 <- glm(even.170 ~
            data = grid170_mets)
 
 #dredge
-even_170_models <- dredge(em_170, m.max = 2, extra = "adjR^2",
+even_170_models <- dredge(em_170, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(lad.max.sc && rumple.sc))
 
-#R-squared information
-summary(even_170_models$`adjR^2`)
+#deviance
+even_170_models
 ```
 
 averaged model output - averaging all models
@@ -2144,15 +2136,15 @@ fe_170 <- glm(FEven ~
            data = grid170_mets)
 
 #dredge
-feven_170_models <- dredge(fe_170, m.max = 2, extra = "adjR^2",
+feven_170_models <- dredge(fe_170, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(lad.max.sc && rumple.sc))
 
-#R-squared information
-summary(feven_170_models$`adjR^2`)
+#deviance
+feven_170_models
 ```
 
 averaged model output - averaging all models
@@ -2193,15 +2185,15 @@ fd_170 <- glm(FDiver ~
            data = grid170_mets)
 
 #dredge
-fdiver_170_models <- dredge(fd_170, m.max = 2, extra = "adjR^2",
+fdiver_170_models <- dredge(fd_170, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(lad.max.sc && rumple.sc))
 
-#R-squared information
-summary(fdiver_170_models$`adjR^2`)
+#deviance
+fdiver_170_models
 ```
 
 averaged model output - averaging all models
@@ -2339,7 +2331,7 @@ rm_pt1 <- glm(n.terr ~
            data = ct_div_mets_terr)
 
 #dredge
-rich_pt_models <- dredge(rm_pt1, m.max = 2, extra = "adjR^2",
+rich_pt_models <- dredge(rm_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -2347,12 +2339,8 @@ rich_pt_models <- dredge(rm_pt1, m.max = 2, extra = "adjR^2",
                                !(mean.tree.h.sc && vzrumple.sc) && 
                                !(rumple.sc && vzrumple.sc))
 
-#R-squared information
-summary(rich_pt_models$`adjR^2`)
-
-#selecting top model by AIC
-#top_rich_pt_model <- get.models(rich_pt_models, subset = 1)
-#summary(top_rich_pt_model[[1]])
+#deviance
+rich_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2395,20 +2383,15 @@ sm_pt1 <- glm(Shannon ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = c("adjR^2", "deviance"),
+shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
                                !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc) && 
                                !(rumple.sc && vzrumple.sc))
-
-#R-squared information
-summary(shan_pt_models$`adjR^2`)
-#summary(shan_pt_models$`adjR^2`[shan_pt_models$delta < 2])
-
 #deviance
-summary(shan_pt_models$deviance)
+shan_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2451,7 +2434,7 @@ em_pt1 <- glm(evenness ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-even_pt_models <- dredge(em_pt1, m.max = 2, extra = "adjR^2",
+even_pt_models <- dredge(em_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -2459,12 +2442,8 @@ even_pt_models <- dredge(em_pt1, m.max = 2, extra = "adjR^2",
                                !(mean.tree.h.sc && vzrumple.sc) && 
                                !(rumple.sc && vzrumple.sc))
 
-#R-squared information
-summary(even_pt_models$`adjR^2`)
-
-#selecting top model by AIC
-#top_even_pt_model <- get.models(even_pt_models, subset = 1)
-#summary(top_even_pt_model[[1]])
+#deviance
+even_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2518,10 +2497,6 @@ frich_pt_models <- dredge(frich_pt, m.max = 2, extra = "adjR^2",
 
 #R-squared information
 summary(frich_pt_models$`adjR^2`)
-
-#selecting top model by AIC
-#top_frich_pt_model <- get.models(frich_pt_models, subset = 1)
-#summary(top_frich_pt_model[[1]])
 ```
 
 averaged model output - averaging all models
@@ -2565,7 +2540,7 @@ feven_pt <- glm(FEven ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "adjR^2",
+feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -2573,12 +2548,8 @@ feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "adjR^2",
                                !(mean.tree.h.sc && vzrumple.sc) && 
                                !(rumple.sc && vzrumple.sc))
 
-#R-squared information
-summary(feven_pt_models$`adjR^2`)
-
-#selecting top model by AIC
-#top_feven_pt_model <- get.models(feven_pt_models, subset = 1)
-#summary(top_feven_pt_model[[1]])
+#deviance
+feven_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2622,7 +2593,7 @@ fdiver_pt <- glm(FDiver ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "adjR^2",
+fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
                                !(max.height.sc && mean.tree.h.sc) && 
@@ -2630,12 +2601,8 @@ fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "adjR^2",
                                !(mean.tree.h.sc && vzrumple.sc) && 
                                !(rumple.sc && vzrumple.sc))
 
-#R-squared information
-summary(fdiver_pt_models$`adjR^2`)
-
-#selecting top model by AIC
-#top_fdiver_pt_model <- get.models(fdiver_pt_models, subset = 1)
-#summary(top_fdiver_pt_model[[1]])
+#deviance
+fdiver_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2799,7 +2766,6 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
   theme(axis.text.y = element_text(hjust = 1),
         legend.position = "bottom") +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlim(-3.2, 3.2) +
   scale_y_discrete(labels = label_mappings) +
   scale_color_manual(values = rev(c("forestgreen", "darkgreen", "grey", "steelblue")),
                      labels = rev(c("eco: camera trap",
