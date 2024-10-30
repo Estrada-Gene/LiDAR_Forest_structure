@@ -3570,7 +3570,7 @@ summarize_adj_cv2 <- function(data, scale_column) {
   data %>%
     group_by(!!sym(scale_column)) %>%
     summarize(across(all_of(metric_list_FD), ~ calculate_adj_cv(.x), .names = "adj_cv_{col}")) %>%
-    ungroup()  # Keep ungrouped so each row represents individual cells
+    ungroup()
 }
 
 #calculate adj CV
