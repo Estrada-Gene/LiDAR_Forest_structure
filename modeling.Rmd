@@ -574,197 +574,10 @@ cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 ```
 
 
-## DISTANCE x DISSIMILARITY
-
-Calculating pairwise distance for scanned locations and plotting values by pairwise similarity, with blue points showing pairs in the same forest type and red points pairs in different partitions. I include community metrics here as well, but it might be worthwhile to see what the linear models look like for these for the full set of camera traps, since we know that the community metrics for only the scanned sites differs from the values for all CT sites, especially in the higher elevation partitions.
-```{r fig.height=8, fig.width=10}
-#pairwise distances for scanned locations
-distance_df <- as.data.frame(as.table(distm(stand_mets[,c("longitude","latitude")], fun = distHaversine)))
-colnames(distance_df) <- c("loc1", "loc2", "distance")
-distance_df$loc1 <- as.integer(distance_df$loc1)
-distance_df$loc2 <- as.integer(distance_df$loc2)
-
-#pairwise similarity for each metric
-metric_list <- c("max.height", "sd.r", "CRR.rho", "pts.below.2m", "stand.dens", "basal.area", 
-             "stem.vol", "mean.tree.h", "mean.dbh", "zentropy", "lad.max", "rumple", 
-             "vFRcanopy", "vzrumple", "ClosedGapSpace","n.all", "shannon_ct", "div_even")
-
-similarity_list <- lapply(metric_list, function(metric) {
-  metric_data <- stand_mets[[metric]]
-  similarity_matrix <- as.matrix(dist(metric_data))
-  similarity_df <- as.data.frame(as.table(similarity_matrix))
-  colnames(similarity_df) <- c("loc1", "loc2", "similarity")
-  similarity_df$metric <- metric
-  return(similarity_df)
-})
-
-similarity_df <- do.call(rbind, similarity_list)
-similarity_df$loc1 <- as.integer(similarity_df$loc1)
-similarity_df$loc2 <- as.integer(similarity_df$loc2)
-
-#combine distance and similarity data
-pairs_df <- distance_df %>%
-  left_join(similarity_df, by = c("loc1", "loc2")) %>%
-  mutate(
-    same_pt = stand_mets$partition[as.integer(loc1)] == stand_mets$partition[as.integer(loc2)],
-    same_pt = ifelse(same_pt, "same", "different"))
-
-#plot
-ggplot(pairs_df[!pairs_df$distance == 0,], 
-       aes(x = distance, y = similarity)) +
-  geom_point(aes(color = same_pt, shape = same_pt), 
-             alpha = 0.5, size = 0.75) +
-  geom_smooth(aes(group = same_pt, color = same_pt), 
-              method = "lm", se = FALSE) +
-  facet_wrap(~ metric, scales = "free_y") +
-  labs(x = "Geographic Distance (m)", y = "Structural Dissimilarity (Euclidean Distance)",
-       color = "partition", shape = "partition") +
-  scale_color_manual(values = c("same" = "blue", "different" = "red")) +
-  theme_minimal() +
-  theme(legend.position = c(0.8, 0.02),
-        legend.justification = c(1, 0),   
-        legend.box.just = "right")
-```
-
-
-Comparison table showing intercepts and slopes of the linear models plotted above. 11/15 structure metrics show a lower intercept for the 'same partition' group compared to the 'different partition' group, while 9/15 show lower slope values for the 'same partition' group. 'inst.s.lt.d' = intercept 'same' less than 'different'. 'slo.s.lt.d' = slope 'same' less than 'different'
-```{r}
-#list for intercepts and slopes
-model_results <- lapply(metric_list, function(metric_name) {
-  metric_df <- pairs_df %>%
-    filter(metric == metric_name & distance != 0)
-
-  model_same <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "same",])
-  model_different <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "different",])
-
-  intercept_same <- coef(model_same)[1]
-  slope_same <- coef(model_same)[2]
-  
-  intercept_different <- coef(model_different)[1]
-  slope_different <- coef(model_different)[2]
-  
-  intercept_comparison <- intercept_same < intercept_different
-  slope_comparison <- slope_same < slope_different
-  
-  data.frame(
-    metric = metric_name,
-    int.same = intercept_same,
-    int.diff = intercept_different,
-    slope.same = slope_same,
-    slope.diff = slope_different,
-    int.s.lt.d = intercept_comparison,
-    slo.s.lt.d = slope_comparison
-  )
-})
-
-#combine into one table
-(model_results <- do.call(rbind, model_results))
-```
-
-again for the 170 ha grid for comparison. 8/15 metrics show an intercept lower for within-cell pairs compared to between cells 
-```{r eval=FALSE, include=FALSE}
-#combine distance and similarity data
-pairs_df <- distance_df %>%
-  left_join(similarity_df, by = c("loc1", "loc2")) %>%
-  mutate(
-    same_pt = stand_mets$grid170[as.integer(loc1)] == stand_mets$grid170[as.integer(loc2)],
-    same_pt = ifelse(same_pt, "same", "different"))
-
-#list for intercepts and slopes
-model_results2 <- lapply(metric_list, function(metric_name) {
-  metric_df <- pairs_df %>%
-    filter(metric == metric_name & distance != 0)
-
-  model_same <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "same",])
-  model_different <- lm(similarity ~ distance, data = metric_df[metric_df$same_pt == "different",])
-
-  intercept_same <- coef(model_same)[1]
-  slope_same <- coef(model_same)[2]
-  
-  intercept_different <- coef(model_different)[1]
-  slope_different <- coef(model_different)[2]
-  
-  intercept_comparison <- intercept_same < intercept_different
-  slope_comparison <- slope_same < slope_different
-  
-  data.frame(
-    metric = metric_name,
-    int.same = intercept_same,
-    int.diff = intercept_different,
-    slope.same = slope_same,
-    slope.diff = slope_different,
-    int.s.lt.d = intercept_comparison,
-    slo.s.lt.d = slope_comparison
-  )
-})
-
-#combine into one table
-(model_results2 <- do.call(rbind, model_results2))
-```
-
-
 ## SPATIAL AUTOCORRELATION
-
-First I want to just visualize spatial patterns of structure variables and community metrics across the study site, by camera trap location. 
-```{r fig.height=8, fig.width=10}
-stand_mets %>%
-  dplyr::select(locationID, longitude, latitude, metric_list, FRich, FEven, FDiver) %>%
-  tidyr::pivot_longer(cols = -c(locationID, longitude, latitude), 
-                      names_to = "variable", values_to = "value") %>%
-  group_by(variable) %>%
-  mutate(norm_value = (value - min(value, na.rm = TRUE)) / (max(value, na.rm = TRUE) - min(value, na.rm = TRUE))) %>%
-  ungroup() %>%
-  ggplot(aes(x = longitude, y = latitude, color = norm_value)) +
-  geom_point(size = 3) +
-  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0.5) +
-  facet_wrap(~ variable, scales = "free") +
-  labs(x = "longitude", y = "latitude", color = "Metric Value (normalized") +
-  theme_minimal() +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(size = 10),
-        legend.position = c(1, 0),
-        legend.justification = c(1, 0),
-        legend.key.size = unit(0.3, "cm"),
-        legend.text = element_text(size = 8))
-```
-
-
-Mapping the community metrics by all CT locations (the figure above only plots scanned locations)
-```{r}
-# Specify the order of the variables and rename them
-div_mets_viz %>%
-  dplyr::select(locationID, shannon_ct, n.all, div_even) %>%
-  left_join(fd_metrics_df, by = "locationID") %>%
-  left_join(ct[, c("locationID", "latitude", "longitude")]) %>%
-  tidyr::pivot_longer(cols = c(n.all, shannon_ct, div_even, FRich, FEven, FDiver), 
-                      names_to = "variable", values_to = "value") %>%
-  group_by(variable) %>%
-  mutate(norm_value = (value - min(value, na.rm = TRUE)) / (max(value, na.rm = TRUE) - min(value, na.rm = TRUE))) %>%
-  ungroup() %>%
-  mutate(variable = factor(variable, levels = c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver"),
-                           labels = c("Species Richness", "Shannon Diversity", "Species Evenness", 
-                                      "Func. Richness", "Func. Evenness", "Func. Divergence"))) %>%
-  ggplot(aes(x = longitude, y = latitude, color = norm_value)) +
-  geom_point(size = 3) +
-  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0.5) +
-  facet_wrap(~ variable, scales = "free", labeller = label_value) +
-  labs(x = "Longitude", y = "Latitude", color = "") +
-  theme_minimal() +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(size = 10),
-        legend.key.size = unit(0.3, "cm"),
-        legend.text = element_text(size = 8))
-
-```
-
 
 ### Global Moran's I 
 
-A formal test of spatial autocorrelation across the entire study area. I may only be able to meaningfully test for spatial autocorrelation at this scale, and not at the grid or partition scales, as the typical low end of spatial units required for reliable statistical inference is 30.
-
-Five structure metrics show a significant level of spatial autocorrelation, including max height, vertical rumple, vegetation volume, leaf area density, and mean tree height. 
-
-Looking at the spatial patterns for these metrics in the plots above, max height, vrumple, lad, and mean height seem to show a roughly similar pattern, with low values in the swamp forests and montane, and highest values in the lowland forests in the center of the trail system - exactly what we see in the boxplots of these values plotted by forest type. Vegetation volume (vFRcanopy) shows a different spatial pattern. And rumple, along with closedgapspace show an outlier in the center of the trail system - location BC 12.4 (not sure what's going on with that one)
 ```{r}
 #convert stand mets df to spatial object
 stand_mets_sp <- stand_mets
@@ -852,7 +665,6 @@ stand_mets <- cbind(stand_mets, eigenvectors)
 ```
 
 
-
 ## CREATING SURVEY GRIDS
 ```{r include=FALSE}
 #convert data to sf object
@@ -924,7 +736,7 @@ m_filtered <- grid75_cells %>%
 #write grid as shapefile
 #st_write(final_grid, "medium_grid_75ha.shp")
 
-###########################################################################################################
+#####################################################################################################
 #for large sized grid (~170 ha)
 initial_size <- 48 
 min_cells <- 10
@@ -966,7 +778,7 @@ m_filtered <- grid170_cells %>%
 #st_write(final_grid, "medium_grid_170ha.shp")
 ```
 
-Again for the grid that I created in ArcGIS - 650 ha 2X2 
+Again for 650 ha 2X2 
 ```{r}
 grid650 <- read.csv(file = "data/locationID_grid650.csv", header = TRUE)
 
@@ -990,37 +802,23 @@ stand_mets <- stand_mets %>%
 I used {FORTLS} to extract the following metrics:
 
 1.  max.height - maximum height of trees in the stand, in m
-
 2.  mean.tree.h - mean tree height in the stand, in m.
-
 3.  CRR.rho - canopy relief ratio, using rho for horizontal distance. A measure of canopy variation, with lower scores indicating lower local variation in canopy surface, i.e., more uniform age canopy/ less canopy surface complexity.
-
 4.  sd.r - standard deviation of tree heights in stand in m. I've seen this value used as an approximation for vertical stratification.
-
 5.  mean.dbh - mean diameter at breast height of trees in stand, in cm (measured at height of 1.3m)
-
 6.  basal.area - basal area of trees in the stand (m2/ha)
-
 7.  stand.dens - density of trees in the stand (trees/ha)
-
 8.  stem.vol - volume of trees in the stand (m3/ha)
-
 9.  pts.below.2m - shows the number of points in the point cloud that are below 2m.
 
 I used {lidr} and {lidRmetrics} to extract the following metrics:
 
 10. zentropy - normalized Shannon diversity index of z (height) values. Describes vertical complexity.
-
 11. lad.max - Leaf Area Density maximum value for 1m vertical bins. Describes maximum foliage cover of the point cloud.
-
 12. rumple - Rumple index (rugosity), a ratio of the canopy surface area to it's projected ground area.
-
 vn - number of 1m voxels created for the following volumetric metrics.
-
 13. vFRcanopy - ratio of filled to empty voxels, only counting cells within and below canopy, ignoring above.
-
 14. vzrumple - vertical Rumple index.
-
 15. ClosedGapSpace - volume of voxels that are classified as gaps underneath the canopy
 
 #### Check correlation between community metrics and predictors.
@@ -1034,16 +832,9 @@ chart.Correlation(stand_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.belo
                   method = "spearman")
 ```
 
-COMMUNITY METS: By camera trap location - species richness & shannon, and FRich and shannon are moderately correlated (both 0.69), FRich and richness are highly correlated (0.82)
-```{r}
-chart.Correlation(stand_mets[,c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
-
 
 ### Models by camera trap location
-Fitting global model then using {dredge} to find models of best fit.
-Restricting models to five predictors to avoid overfitting. Excluding two highly correlated pairs in dredge models: basal area & stand density, and basal area & stem volume.
+Fitting global model then using {dredge} to find models of best fit
 
 #### Species richness model
 
@@ -1321,8 +1112,6 @@ plot(fdiver_models_avg, full = FALSE, intercept = FALSE, main = "Functional Dive
 
 #### Comparing coefficient plot from averaged models
 
-Plotting variables from models that are at least closely reliable predictors (50% CI's don't overlap zero).
-
 ```{r fig.height=5, fig.width=6}
 #function to extract coefficients and confidence intervals
 extract_coefs <- function(model_avg, model_name) {
@@ -1378,10 +1167,8 @@ ggplot(aes(x = estimate, y = predictor, color = model)) +
 
 #### 75 ha grid
 
-The 75 ha grid creates 17 groups, with most groups (grid cells) containing 2 - 4 scanned locations each. 
 ```{r include=FALSE}
 #species richness
-#all CT locations
 grid75_mets <- m_filtered %>%
   group_by(grid.75) %>%
   summarise(n.all = n_distinct(Species))
@@ -1461,13 +1248,8 @@ grid75_mets <- as.data.frame(table(grid75$grid_id)) %>%
   left_join(grid75_mets, ., by = "grid.75")
 ```
 
-Correlation of community metrics. Richness is highly correlated with FRich and FDiver, and shannon is highly correlated with evenness. So probably should only keep shannon and the functional metrics. 
-```{r}
-chart.Correlation(grid75_mets[,c("n.all", "shannon_75", "even.75", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
 
-Correlation of structure metrics - basal area and stand dens, basal area and stem vol, %<2m and sd.r, max h and mean h, max h and vrumple, and mean h and vrumple
+Correlation of structure metrics
 ```{r}
 chart.Correlation(grid75_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc",
                                     "stand.dens.sc","basal.area.sc","stem.vol.sc","mean.tree.h.sc",
@@ -1478,10 +1260,7 @@ chart.Correlation(grid75_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.bel
 
 #### Species richness model
 
-Fitting global model then using {dredge} to find models of best fit.
-
-Top model summary output. Restricting models to two predictors to avoid overfitting
-
+Fitting global model then using {dredge} to find models of best fit
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #removing cells without structure metrics
 grid75_mets <- grid75_mets[complete.cases(grid75_mets),]
@@ -1898,13 +1677,8 @@ grid170_mets <- as.data.frame(table(grid170$grid_id)) %>%
   left_join(grid170_mets, ., by = "grid.170")
 ```
 
-Correlation of community metrics. Richness is highly correlated with FRich (0.87) and shannon is highly correlated with evenness (0.93). So probably should only keep shannon and the functional metrics. 
-```{r}
-chart.Correlation(grid170_mets[,c("n.all", "shannon_170", "even.170", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
 
-Correlation of structure metrics - basal area and stand dens, basal area and mean dbh, max h and mean h, max h and vrumple, rumple and lad, 
+Correlation of structure metrics
 ```{r}
 chart.Correlation(grid170_mets[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pts.below.2m.sc",
                                     "stand.dens.sc","basal.area.sc","stem.vol.sc","mean.tree.h.sc",
@@ -2066,8 +1840,6 @@ plot(even_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Evenne
 
 #### Functional richness model
 
-The beta coefficients are very large here, not sure why this is so much different from the rest of the models. Maybe an odd convergence issue?
-
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fr_170 <- glm(FRich ~ 
@@ -2216,7 +1988,7 @@ plot(fdiver_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FDiv
 
 #### Comparing coefficient plots from averaged models
 
-Showing only richness, shannon, FEven, and FDiver models, since FRich seemingly had nonsense results
+Showing only richness, shannon, FEven, and FDiver models, since FRich had convergence issues
 ```{r fig.height=6, fig.width=6}
 #extract coefficients from averaged models
 coef_rich <- extract_coefs(rich_models_170_avg, "rich")
@@ -2284,13 +2056,6 @@ ct_div_mets_terr <- as.data.frame(table(data_sf$partition)) %>%
 
 #### Check correlation between outcome variables and predictors.
 
-Correlation of community metrics. Richness is highly correlated with FRich and shannon is highly correlated with evenness. As above, FRich shows a large outlier in one of the group averages. 
-```{r}
-chart.Correlation(ct_div_mets_terr[,c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")],
-                  method = "spearman")
-```
-
-
 Basal area is highly correlated (\>0.8) with stand density, max height with mean tree h and vzrumple, and vzrumple with mean tree height and rumple. 
 
 ```{r}
@@ -2303,10 +2068,7 @@ chart.Correlation(ct_div_mets_terr[,c("max.height.sc","sd.r.sc","CRR.rho.sc","pt
 
 #### Species richness model
 
-Fitting global model then using {dredge} to find models of best fit.
-
-Top model summary output. Restricting models to two predictors to avoid overfitting
-
+Fitting global model then using {dredge} to find models of best fit
 ```{r}
 #removing MO1 partition since no structure mets are from this pt
 ct_div_mets_terr <- ct_div_mets_terr[!ct_div_mets_terr$partition == "MO1",]
@@ -2467,8 +2229,7 @@ plot(even_models_pt_avg, full = FALSE, intercept = FALSE,
 
 #### Functional richness model
 
-The model output here seems odd. After looking at the fric values closer, there seems to be an outlier here which may be throwing off the analysis. Not sure what to do here other than not include it in the final analysis, which may be warranted based on the high correlation between the richness and fric values (0.81)
-
+Convergence issues
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 frich_pt <- glm(FRich ~  
@@ -2625,8 +2386,6 @@ plot(fdiver_pt_models_avg, full = FALSE, intercept = FALSE,
 
 
 #### Comparing coefficient plot from averaged models
-
-Since fric is highly correlated with richness (0.81) it makes sense to ignore this model here. Of the other models that have reliable predictors, the shannon and evenness values are also highly correlated (0.89) and both show vFRcanopy (vegetated volume) as the sole reliable predictor, so I also omit the evenness model here. 
 
 ```{r fig.height=5, fig.width=6}
 #extract coefficients for each averaged model
@@ -2806,7 +2565,7 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("shan_ct","shan_pt","shan_
 #coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
 coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting - only the functional models for now
+#plotting 
 metrics_order <- c("mean.tree.h.sc","rumple.sc","zentropy.sc","lad.max.sc","CRR.rho.sc",
                    "ClosedGapSpace.sc","vFRcanopy.sc","sd.r.sc","max.height.sc","stem.vol.sc",
                    "mean.dbh.sc","vzrumple.sc","stand.dens.sc","basal.area.sc","pts.below.2m.sc")
@@ -2994,7 +2753,7 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("Feve_ct","Feve_pt","Feve_
 #coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
 coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting - only the functional models for now
+#plotting
 ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_order)), color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -3042,7 +2801,7 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("Fdiv_ct","Fdiv_pt","Fdiv_
 #coef_df_filter <- coef_df[!(coef_df$`25 %` <= 0 & coef_df$`75 %` >= 0),]
 coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting - only the functional models for now
+#plotting 
 ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_order)), color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -3067,335 +2826,10 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
 ```
 
 
-## ORDINATION ANALYSIS
-
-Using PCA to see how scan locations group together and to identify which forest structure metrics best differentiate between forest types and partitions.
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-#run PCA
-pca_result <- prcomp(stand_mets[,c("max.height",
-                                   "sd.r",
-                                   "CRR.rho",
-                                   "pts.below.2m",
-                                   "stand.dens",
-                                   "basal.area",
-                                   "stem.vol",
-                                   "mean.tree.h",
-                                   "mean.dbh",
-                                   "zentropy",
-                                   "lad.max",
-                                   "rumple",
-                                   "vFRcanopy",
-                                   "vzrumple",
-                                   "ClosedGapSpace")], 
-                     scale. = TRUE)
-
-#PCA scores
-pca_scores <- as.data.frame(pca_result$x[, 1:2])
-colnames(pca_scores) <- c("PC1", "PC2")
-
-#add forest type and partition to pca_score table
-pca_scores$ForestType <- stand_mets$habitat
-pca_scores$partition <- stand_mets$partition
-
-#calculate percentage of variance explained by each principal component
-pca_var <- summary(pca_result)$importance[2, ]
-
-#visualize eigenvalues (scree plot) - shows many dimensions explain much variance
-fviz_eig(pca_result)
-
-#plot PCA results with ellipses using ggplot2
-ggplot(pca_scores, aes(x = PC1, y = PC2, color = as.factor(partition))) +
-  geom_point(size = 3) +
-  stat_ellipse(level = 0.95, aes(fill = as.factor(ForestType)), alpha = 0.2, geom = "polygon") +
-  theme_classic() +
-  labs(color = "partition", fill = "partition", title = "PCA of Forest Structure Metrics") +
-  guides(color = guide_legend(reverse = TRUE), fill = guide_legend(reverse = TRUE))
-```
-
-
-Which structure metrics best differentiate between locations?
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-fviz_pca_var(pca_result,
-             col.var = "contrib",
-             gradient.cols = c("grey", "forestgreen", "black"),
-             repel = TRUE)
-```
-
-Table of variable PCA contribution values 
-```{r}
-get_pca_var(pca_result)$contrib %>%
-  as.data.frame() %>%
-  rowwise() %>%
-  mutate(total_contrib = sum(c_across(starts_with("Dim.1") | starts_with("Dim.2")))) %>%
-  ungroup() %>%
-  mutate(variable = rownames(get_pca_var(pca_result)$contrib)) %>%
-  dplyr::select(variable, total_contrib) %>%
-  arrange(desc(total_contrib))
-```
-
-
-## BIVARIATE PLOTS
-
-### terrestrial mammals (ct data) by ct location
-
-Structure metrics X species richness
-
-```{r}
-#selecting only metrics of interest
-fs_mets <- c("max.height", "sd.r", "CRR.rho", "pts.below.2m", "stand.dens", "basal.area", "stem.vol", "mean.tree.h", "mean.dbh", "zentropy", "lad.max", "rumple", "vFRcanopy", "vzrumple", "ClosedGapSpace")
-
-stand_mets %>%
-  dplyr::select(location, n.all, shannon_ct, div_even, all_of(fs_mets)) %>%
-  pivot_longer(cols = fs_mets, 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, n.all, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = n.all)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Species Richness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-
-Structure metrics X Shannon diversity
-
-```{r}
-stand_mets %>%
-  dplyr::select(location, n.all, shannon_ct, div_even, all_of(fs_mets)) %>%
-  pivot_longer(cols = all_of(fs_mets), 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, shannon_ct, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = shannon_ct)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Shannon Diversity") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-Structure metrics X Species Evenness
-
-```{r}
-stand_mets %>%
-  dplyr::select(location, n.all, shannon_ct, div_even, all_of(fs_mets)) %>%
-  pivot_longer(cols = all_of(fs_mets), 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, div_even, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = div_even)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Species Evenness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-Structure metrics X Functional Richness
-
-```{r}
-stand_mets %>%
-  dplyr::select(location, FRich, FEven, FDiver, all_of(fs_mets)) %>%
-  pivot_longer(cols = all_of(fs_mets), 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, FRich, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = FRich)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Functional Richness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-Structure metrics X Functional Evenness
-
-```{r}
-stand_mets %>%
-  dplyr::select(location, FRich, FEven, FDiver, all_of(fs_mets)) %>%
-  pivot_longer(cols = all_of(fs_mets), 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, FEven, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = FEven)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Functional Evenness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-Structure metrics X Functional Divergence
-
-```{r}
-stand_mets %>%
-  dplyr::select(location, FRich, FEven, FDiver, all_of(fs_mets)) %>%
-  pivot_longer(cols = all_of(fs_mets), 
-               names_to = "metric", 
-               values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, FDiver, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = FDiver)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Functional Divergence") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-
-### terrestrial mammals (ct data) by partition
-
-Structure metrics X species richness
-
-```{r}
-ct_div_mets_terr %>%
-  pivot_longer(cols = c(9:27), names_to = "metric", values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, n.terr, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = n.terr)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Species Richness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-
-Structure metrics X Shannon diversity
-
-```{r}
-ct_div_mets_terr %>%
-  pivot_longer(cols = c(9:27), names_to = "metric", values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, Shannon, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = Shannon)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Shannon Diversity") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-Structure metrics X Species Evenness
-
-```{r}
-ct_div_mets_terr %>%
-  pivot_longer(cols = c(9:27), names_to = "metric", values_to = "value") %>%
-  group_by(metric) %>%
-  mutate(cor = cor(value, evenness, method = "spearman", use = "complete.obs"),
-         subtitle = paste("Spearman's r =", round(cor, 2))) %>%
-  ggplot(aes(x = value, y = evenness)) +
-  geom_point() +
-  geom_smooth(method = "gam", formula = y ~ s(x), se = FALSE, color = "cornflowerblue") +
-  facet_wrap(~ metric, scales = "free_x") +
-  labs(x = "Structure Metric Value", y = "Species Evenness") +
-  theme_minimal() +
-  geom_text(data = . %>% group_by(metric) %>% summarise(cor = unique(cor)),
-            aes(label = paste("Spearman's r =", round(cor, 2)), x = Inf, y = -Inf),
-            hjust = 1.1, vjust = -1.1, color = "black", size = 3, 
-            position = position_nudge(x = -0.5, y = 0.5))
-```
-
-
-summary table for Pearson correlation between structure metrics and diversity metrics
-```{r}
-#creating matrix for vars at the CT scale
-divmets <- c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")
-
-cor_matrix <- matrix(nrow = length(fs_mets), ncol = length(divmets))
-rownames(cor_matrix) <- fs_mets
-colnames(cor_matrix) <- divmets
-
-#calculate Pearson correlation coefficients
-for (i in 1:length(fs_mets)) {
-  for (j in 1:length(divmets)) {
-    cor_matrix[i, j] <- cor(stand_mets[[fs_mets[i]]], stand_mets[[divmets[j]]], 
-                            method = "pearson", use = "complete.obs")
-  }
-}
-
-#creating matrix for vars at the partition scale
-divmets <- c("n.terr", "Shannon", "evenness", "FRich", "FEven", "FDiver")
-
-cor_matrix2 <- matrix(nrow = length(fs_mets), ncol = length(divmets))
-rownames(cor_matrix2) <- paste0(fs_mets, ".sc")
-colnames(cor_matrix2) <- divmets
-
-#calculate Pearson correlation coefficients
-for (i in 1:length(fs_mets)) {
-  for (j in 1:length(divmets)) {
-    cor_matrix2[i, j] <- cor(ct_div_mets_terr[[paste0(fs_mets, ".sc")[i]]], ct_div_mets_terr[[divmets[j]]], method = "pearson")
-  }
-}
-
-#combining matrices and changing model names for clarity
-cor_df <- as.data.frame(cbind(cor_matrix, cor_matrix2))
-colnames(cor_df) <- c("Richness", "Shannon Diversity", "Evenness", 
-                      "Func. Richness", "Func. Evenness", "Func. Divergence",
-                      "Richness", "Shannon Diversity", "Evenness", 
-                      "Func. Richness", "Func. Evenness", "Func. Divergence")
-
-#create table
-kbl(cor_df, format = "html", 
-    caption = "Pearson correlations beteen structure metrics and diversity metrics") %>%
-  kable_styling(bootstrap_options = "striped") %>%
-  add_header_above(c(" " = 1, "Camera Trap Scale" = 6, "Partition Scale" = 6))
-```
-
-
 ## Spatial heterogeneity in the grid systems compared to partitions
 
-How do forest types and partitions map on to the grid systems created above?
+How do forest types and partitions map on to the grid systems?
 
-In the 75 ha grid system, cells contain between 1 and 6 partitions, with an average of 2.8 paritions per cell. In the 170 ha grid system this range is 2 - 7 with an average of 3.2. 
 ```{r}
 #read in the forest type and partitions by grid cell data
 grid_int <- read.csv(file = "data/grids_intersect.csv", header = TRUE)
@@ -3411,7 +2845,7 @@ table(grid_int$grid_id[grid_int$grid_size == 170])
 mean(table(grid_int$grid_id[grid_int$grid_size == 170]))
 ```
 
-What proportion of partitions are within each cell of the two grid systems? I still need to choose a color scheme for the partitions, something that matches the forest type colors. 
+What proportion of partitions are within each cell of the two grid systems?
 ```{r}
 #calculate partition proportions
 grid_int <- grid_int %>%
@@ -3468,7 +2902,7 @@ cowplot::plot_grid(p1, p2,nrow = 1, rel_widths = c(.4, .55))
 ```
 
 
-How does variation in structure metrics compare between scales? The table shows the average adjusted coefficient of variation (which controls for sample size) of structure metrics across cells and partitions, comparing across the different scales. If grid systems are capturing more ecological variation in these metrics compared to forest type partitions, then we would expect the 170 ha grid average values to be larger than those at the partition scale. This is indeed what we see, with most (12/15) structure metrics and half (3/6) community metrics showing less variation at the partition scale than the comparable 170 ha grid scale. 
+How does variation in structure metrics compare between scales?
 ```{r}
 metric_list_FD <- c(metric_list, "FRich", "FEven", "FDiver")
 stand_mets$study.area <- 1
@@ -3521,7 +2955,7 @@ adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
 ```
 
 
-Figure showing how average adjusted coefficient of variation (which controls for number of camera trap locations in each cell) increases as grid size increases across the 15 forest structure metrics. Some metrics reach a peak at 170 or 650 ha scale, and don't show more variation even at the study area scale. However, all but one of the metrics (mean dbh; highlighted) increase in variation from the 75 ha to the study area scale.  
+Figure showing how average adjusted coefficient of variation (which controls for number of camera trap locations in each cell) increases as grid size increases across the 15 forest structure metrics.
 ```{r fig.height=7, fig.width=5}
 adjCV_mets %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
@@ -3569,7 +3003,7 @@ adjCV_mets %>%
 ```
 
 
-Again but using facet wrap
+Again, but using facet wrap
 ```{r}
 #adjusted function
 summarize_adj_cv2 <- function(data, scale_column) {
@@ -3612,34 +3046,37 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
                                "stand.dens" = "tree density",
                                "basal.area" = "basal area",
                                "pts.below.2m" = "terrestrial veg."))
-
-#plot
-adjCV_mets_long2 %>%
-  filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
-  mutate(scale = factor(scale, levels = c("75 ha", "170 ha", "650 ha", "study area", "partition"))) %>%
-  ggplot(aes(x = scale, y = value, group = metric)) +
-  #geom_point(size = 2, shape = 1, color = "grey30", position = position_jitter(width = 0.1)) +
-  stat_summary(fun = mean, geom = "line", aes(color = "mean trend"), size = 1) +
-  stat_summary(data = . %>% filter(scale == "partition"),
-               fun = mean, geom = "errorbarh", aes(xmax = 2.5, xmin = 1.5), 
-               color = "forestgreen", size = 1.2, height = 0) +
-  facet_wrap(~ metric_label, scales = "free_y") +
-  labs(x = "grid scales (sq. km)", y = "adjusted coefficient of variation") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  scale_x_discrete(labels = c("75 ha" = "0.75", 
-                              "170 ha" = "1.7", 
-                              "650 ha" = "6.5", 
-                              "study area" = "26")) +
-  scale_color_manual(values = c("mean trend" = "grey30"))
 ```
 
-test
+plot
 ```{r}
-#again using log scale x axis
-adjCV_mets_long2 <- adjCV_mets_long2 %>%
-  filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver"))
+#set order
+metrics_order2 <- c("tree h max.", "tree h", "CRR", "tree h sd", "tree dbh", "basal area",
+                    "tree dens.", "tree vol.", "n pts<2m", "v dist.", "LAD", "rumple", 
+                    "veg. vol.", "v complex.", "gap vol.")
 
+#remove diversity mets, set mets order
+adjCV_mets_long2 <- adjCV_mets_long2 %>%
+  filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
+  mutate(metric_label = factor(metric_label, levels = metrics_order2))
+
+#set custom titles
+custom_titles <- c(
+  "tree h" = "tree h mean",
+  "CRR" = "canopy relief ratio",
+  #"tree dbh" = "Tree Diameter",
+  #"basal area" = "Basal Area",
+  "tree dens." = "tree density",
+  "tree vol." = "tree volume",
+  "n pts<2m" = "terrestrial veg.",
+  "v dist." = "vertical pt. dist.",
+  "LAD" = "leaf area density",
+  "rumple" = "canopy roughness",
+  "veg. vol." = "veg. volume",
+  "v complex." = "vertical pt. complex.",
+  "gap vol." = "gap volume")
+
+#plot using log scale x axis
 adjCV_mets_long2 %>%
   filter(scale != "partition") %>%  # Exclude the partition scale from the main plot
   mutate(scale_numeric = case_when(
@@ -3652,16 +3089,21 @@ adjCV_mets_long2 %>%
   stat_summary(fun = mean, geom = "line", aes(color = "mean trend"), size = 1) +
   stat_summary(data = adjCV_mets_long2 %>% 
                  filter(scale == "partition") %>%
-                 mutate(scale_numeric = 1.7),  # Place partition CV near 1.7 km
-               fun = mean, geom = "errorbarh", aes(xmax = 2.2, xmin = 1.2), 
+                 mutate(scale_numeric = 1.7), 
+               fun = mean, geom = "errorbarh", aes(xmax = 2, xmin = 1.4), 
                color = "forestgreen", size = 1.2, height = 0) +
-  facet_wrap(~ metric_label, scales = "free_y") +
-  labs(x = "grid scales (sq. km)", y = "adjusted coefficient of variation") +
+  facet_wrap(~ metric_label, scales = "free_y",
+             labeller = labeller(metric_label = custom_titles), 
+             ncol = 3) +
+  labs(x = expression("spatial scale ("*km^2*")"), 
+       y = "adjusted coefficient of variation") +
   theme_minimal() +
   theme(legend.position = "none") +
   scale_x_log10(breaks = c(0.75, 1.7, 6.5, 26),
                 labels = c("0.75", "1.7", "6.5", "26")) +
   scale_color_manual(values = c("mean trend" = "grey30"))
+
+#ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 7.5, height = 9, dpi = 500, device = "jpeg")
 ```
 
 
@@ -3692,4 +3134,3 @@ new_table$Trophic.Level[new_table$Trophic.Level == 3 & !is.na(new_table$Trophic.
 
 #write.csv(new_table, file = "tableS1.csv")
 ```
-
