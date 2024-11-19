@@ -101,7 +101,7 @@ plot1 <- ggplot(stand_mets, aes(habitat, max.height, color = habitat)) +
   coord_flip() +
   scale_color_manual(values = ft_colors)
 
-#by partition - big difference between LS1 and LS2
+#by partition 
 ggplot(stand_mets, aes(partition, max.height)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.1) + 
@@ -743,7 +743,7 @@ p15 <- ggplot(stand_mets, aes(altitude, ClosedGapSpace, color = habitat)) +
 ```
 
 
-### combining plots into a single grid - only for FORTLS metrics, need to update
+### combining plots into a single grid
 
 forest type plot grid
 ```{r}
@@ -815,9 +815,6 @@ t3 <- ggplot(tree_mets, aes(v)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   xlim(0,2)
 
-#ggsave("tree_mets_hists.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
-
-#trying a plot with a 4th pane to show trees with volume > 2 m3
 t4 <- ggplot(tree_mets, aes(v)) +
   geom_histogram(bins = 100) +
   labs(title = expression("tree vol."> 2~m^3), x = expression(volume~(m^3)), y = "") +
@@ -827,7 +824,7 @@ t4 <- ggplot(tree_mets, aes(v)) +
 
 cowplot::plot_grid(t1, t2, t3, t4, nrow = 1)
 
-#ggsave("tree_mets_hists2.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
+#ggsave("tree_mets_hists.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
 ```
 
 
