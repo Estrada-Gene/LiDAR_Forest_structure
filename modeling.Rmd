@@ -607,6 +607,8 @@ calculate_morans_i <- function(variable, weights) {
 }
 
 #calculate metrics
+metric_list <- c("n.all", "shannon_ct", "div_even")
+
 spac_mets <- map_dfr(metric_list, function(col) {
   metrics <- calculate_morans_i(stand_mets_sp[[col]], weights)
   tibble(Metric = col,
@@ -841,9 +843,9 @@ Fitting global model then using {dredge} to find models of best fit
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 rm1 <- glm(n.all ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -852,7 +854,7 @@ rm1 <- glm(n.all ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              eigenvectors.sc +
@@ -877,7 +879,6 @@ averaged model output - averaging all models
 rich_models_avg <- model.avg(rich_models)
 #summary(rich_models_avg)
 
-dev.off()
 plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mammal Richness - Averaged Model")
 ```
 
@@ -886,9 +887,9 @@ plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mamma
 ```{r message=FALSE, warning=FALSE}
 #species diversity as outcome variable - by CT location
 shannon_model <- glm(shannon_ct ~ 
-                         max.height.sc +
+                         #max.height.sc +
                          mean.tree.h.sc +
-                         CRR.rho.sc +
+                         #CRR.rho.sc +
                          sd.r.sc +
                          mean.dbh.sc +
                          basal.area.sc +
@@ -897,10 +898,11 @@ shannon_model <- glm(shannon_ct ~
                          pts.below.2m.sc +
                          zentropy.sc +
                          lad.max.sc +
-                         rumple.sc +
+                         #rumple.sc +
                          vFRcanopy.sc +
                          vzrumple.sc +
                          eigenvectors.sc +
+                         #scale(altitude) +
                          ClosedGapSpace.sc,
                         na.action = na.fail,
                         family = Gamma(link = "log"), 
@@ -930,9 +932,9 @@ plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mamma
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 even_model <- glm(div_even ~ 
-                max.height.sc +
+                #max.height.sc +
                 mean.tree.h.sc +
-                CRR.rho.sc +
+                #CRR.rho.sc +
                 sd.r.sc +
                 mean.dbh.sc +
                 basal.area.sc +
@@ -941,7 +943,7 @@ even_model <- glm(div_even ~
                 pts.below.2m.sc +
                 zentropy.sc +
                 lad.max.sc +
-                rumple.sc +
+                #rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
                 eigenvectors.sc +
@@ -978,9 +980,9 @@ Top model summary output
 stand_mets_FD <- stand_mets[!is.na(stand_mets$FRich),]
 
 frich_model <- glm(FRich ~ 
-                max.height.sc +
+                #max.height.sc +
                 mean.tree.h.sc +
-                CRR.rho.sc +
+                #CRR.rho.sc +
                 sd.r.sc +
                 mean.dbh.sc +
                 basal.area.sc +
@@ -989,7 +991,7 @@ frich_model <- glm(FRich ~
                 pts.below.2m.sc +
                 zentropy.sc +
                 lad.max.sc +
-                rumple.sc +
+                #rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
                 #eigenvectors.sc +
@@ -1022,9 +1024,9 @@ Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 feven_model <- glm(FEven ~ 
-                max.height.sc +
+                #max.height.sc +
                 mean.tree.h.sc +
-                CRR.rho.sc +
+                #CRR.rho.sc +
                 sd.r.sc +
                 mean.dbh.sc +
                 basal.area.sc +
@@ -1033,7 +1035,7 @@ feven_model <- glm(FEven ~
                 pts.below.2m.sc +
                 zentropy.sc +
                 lad.max.sc +
-                rumple.sc +
+                #rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
                 ClosedGapSpace.sc,
@@ -1068,9 +1070,9 @@ Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 fdiver_model <- glm(FDiver ~ 
-                max.height.sc +
+                #max.height.sc +
                 mean.tree.h.sc +
-                CRR.rho.sc +
+                #CRR.rho.sc +
                 sd.r.sc +
                 mean.dbh.sc +
                 basal.area.sc +
@@ -1079,7 +1081,7 @@ fdiver_model <- glm(FDiver ~
                 pts.below.2m.sc +
                 zentropy.sc +
                 lad.max.sc +
-                rumple.sc +
+                #rumple.sc +
                 vFRcanopy.sc +
                 vzrumple.sc +
                 eigenvectors.sc +
@@ -1267,9 +1269,9 @@ grid75_mets <- grid75_mets[complete.cases(grid75_mets),]
 
 #fitting global model for use in dredge
 rm_75 <- glm(n.all ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1278,7 +1280,7 @@ rm_75 <- glm(n.all ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1292,8 +1294,8 @@ rm_75 <- glm(n.all ~
 rich_75_models <- dredge(rm_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                              # !(max.height.sc && mean.tree.h.sc) && 
+                              # !(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 #deviance
 rich_75_models
@@ -1315,9 +1317,9 @@ plot(rich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Richnes
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 sm_75 <- glm(shannon_75 ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1326,7 +1328,7 @@ sm_75 <- glm(shannon_75 ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1340,8 +1342,8 @@ sm_75 <- glm(shannon_75 ~
 shan_75_models <- dredge(sm_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 
 #deviance
@@ -1364,9 +1366,9 @@ plot(shan_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Diversi
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 em_75 <- glm(even.75 ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1375,7 +1377,7 @@ em_75 <- glm(even.75 ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1389,8 +1391,8 @@ em_75 <- glm(even.75 ~
 even_75_models <- dredge(em_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 #deviance
 even_75_models
@@ -1412,9 +1414,9 @@ plot(even_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Evennes
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fr_75 <- glm(FRich ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1423,7 +1425,7 @@ fr_75 <- glm(FRich ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1437,8 +1439,8 @@ fr_75 <- glm(FRich ~
 frich_75_models <- dredge(fr_75, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 ```
 
@@ -1458,9 +1460,9 @@ plot(frich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fe_75 <- glm(FEven ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1469,7 +1471,7 @@ fe_75 <- glm(FEven ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1483,8 +1485,8 @@ fe_75 <- glm(FEven ~
 feven_75_models <- dredge(fe_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 #deviance
 feven_75_models
@@ -1506,9 +1508,9 @@ plot(feven_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fd_75 <- glm(FDiver ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1517,7 +1519,7 @@ fd_75 <- glm(FDiver ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1531,8 +1533,8 @@ fd_75 <- glm(FDiver ~
 fdiver_75_models <- dredge(fd_75, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
 #deviance
 fdiver_75_models
@@ -1695,9 +1697,9 @@ grid170_mets <- grid170_mets[complete.cases(grid170_mets),]
 
 #fitting global model for use in dredge
 rm_170 <- glm(n.all ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1706,7 +1708,7 @@ rm_170 <- glm(n.all ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1718,11 +1720,11 @@ rm_170 <- glm(n.all ~
 
 #dredge
 rich_170_models <- dredge(rm_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stem.vol.sc) && 
+                               !(basal.area.sc && stand.dens.sc)) 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               #!(lad.max.sc && rumple.sc))
 
 #deviance information
 rich_170_models
@@ -1745,9 +1747,9 @@ plot(rich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Richne
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 sm_170 <- glm(shannon_170 ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1756,7 +1758,7 @@ sm_170 <- glm(shannon_170 ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1768,11 +1770,11 @@ sm_170 <- glm(shannon_170 ~
 
 #dredge
 shan_170_models <- dredge(sm_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stand.dens.sc) && 
+                              !(basal.area.sc && stem.vol.sc))
+                        #       !(max.height.sc && mean.tree.h.sc) && 
+                         #      !(max.height.sc && vzrumple.sc) && 
+                          #     !(lad.max.sc && rumple.sc))
 
 #deviance
 shan_170_models
@@ -1794,9 +1796,9 @@ plot(shan_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Divers
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 em_170 <- glm(even.170 ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1805,7 +1807,7 @@ em_170 <- glm(even.170 ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1817,11 +1819,11 @@ em_170 <- glm(even.170 ~
 
 #dredge
 even_170_models <- dredge(em_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc)) 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               #!(lad.max.sc && rumple.sc))
 
 #deviance
 even_170_models
@@ -1843,9 +1845,9 @@ plot(even_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Evenne
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fr_170 <- glm(FRich ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1854,7 +1856,7 @@ fr_170 <- glm(FRich ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1866,11 +1868,11 @@ fr_170 <- glm(FRich ~
 
 #dredge
 frich_170_models <- dredge(fr_170, m.max = 2, extra = "adjR^2",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc)) 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               #!(lad.max.sc && rumple.sc))
 
 #R-squared information
 summary(frich_170_models$`adjR^2`)
@@ -1892,9 +1894,9 @@ plot(frich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fe_170 <- glm(FEven ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1903,7 +1905,7 @@ fe_170 <- glm(FEven ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1915,11 +1917,11 @@ fe_170 <- glm(FEven ~
 
 #dredge
 feven_170_models <- dredge(fe_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc)) 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               #!(lad.max.sc && rumple.sc))
 
 #deviance
 feven_170_models
@@ -1941,9 +1943,9 @@ plot(feven_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 fd_170 <- glm(FDiver ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -1952,7 +1954,7 @@ fd_170 <- glm(FDiver ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -1964,11 +1966,11 @@ fd_170 <- glm(FDiver ~
 
 #dredge
 fdiver_170_models <- dredge(fd_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(lad.max.sc && rumple.sc))
+                      subset = #!(basal.area.sc && stand.dens.sc) && 
+                               !(basal.area.sc && stem.vol.sc)) 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               #!(lad.max.sc && rumple.sc))
 
 #deviance
 fdiver_170_models
@@ -2077,9 +2079,9 @@ ct_div_mets_terr <- ct_div_mets_terr[!ct_div_mets_terr$partition == "MO1",]
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #fitting global model for use in dredge
 rm_pt1 <- glm(n.terr ~ 
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2088,7 +2090,7 @@ rm_pt1 <- glm(n.terr ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2101,11 +2103,11 @@ rm_pt1 <- glm(n.terr ~
 #dredge
 rich_pt_models <- dredge(rm_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc)) 
+                               #!(rumple.sc && vzrumple.sc))
 
 #deviance
 rich_pt_models
@@ -2119,7 +2121,6 @@ summary(rich_models_pt_avg)
 ```
 
 ```{r}
-dev.off()
 plot(rich_models_pt_avg, full = FALSE, intercept = FALSE, main = "Mammal Richness (partition) - Av. Mod")
 ```
 
@@ -2130,9 +2131,9 @@ Top model summary output.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 sm_pt1 <- glm(Shannon ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2141,7 +2142,7 @@ sm_pt1 <- glm(Shannon ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2153,11 +2154,11 @@ sm_pt1 <- glm(Shannon ~
 #dredge
 shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc))
+                               #!(rumple.sc && vzrumple.sc))
 #deviance
 shan_pt_models
 ```
@@ -2181,9 +2182,9 @@ Top model summary output.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 em_pt1 <- glm(evenness ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2192,7 +2193,7 @@ em_pt1 <- glm(evenness ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2204,11 +2205,11 @@ em_pt1 <- glm(evenness ~
 #dredge
 even_pt_models <- dredge(em_pt1, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc)) 
+                               #!(rumple.sc && vzrumple.sc))
 
 #deviance
 even_pt_models
@@ -2233,9 +2234,9 @@ Convergence issues
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 frich_pt <- glm(FRich ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2244,7 +2245,7 @@ frich_pt <- glm(FRich ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2256,11 +2257,11 @@ frich_pt <- glm(FRich ~
 #dredge
 frich_pt_models <- dredge(frich_pt, m.max = 2, extra = "adjR^2",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc)) 
+                               #!(rumple.sc && vzrumple.sc))
 
 #R-squared information
 summary(frich_pt_models$`adjR^2`)
@@ -2286,9 +2287,9 @@ Top model summary output.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 feven_pt <- glm(FEven ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2297,7 +2298,7 @@ feven_pt <- glm(FEven ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2309,11 +2310,11 @@ feven_pt <- glm(FEven ~
 #dredge
 feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc)) 
+                               #!(rumple.sc && vzrumple.sc))
 
 #deviance
 feven_pt_models
@@ -2339,9 +2340,9 @@ Top model summary output.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 #global model
 fdiver_pt <- glm(FDiver ~  
-             max.height.sc +
+             #max.height.sc +
              mean.tree.h.sc +
-             CRR.rho.sc +
+             #CRR.rho.sc +
              sd.r.sc +
              mean.dbh.sc +
              basal.area.sc + 
@@ -2350,7 +2351,7 @@ fdiver_pt <- glm(FDiver ~
              pts.below.2m.sc +
              zentropy.sc +
              lad.max.sc +
-             rumple.sc +
+             #rumple.sc +
              vFRcanopy.sc +
              vzrumple.sc +
              ClosedGapSpace.sc,
@@ -2362,11 +2363,11 @@ fdiver_pt <- glm(FDiver ~
 #dredge
 fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "deviance",
                       subset = !(basal.area.sc && stand.dens.sc) && 
-                               !(basal.area.sc && stem.vol.sc) && 
-                               !(max.height.sc && mean.tree.h.sc) && 
-                               !(max.height.sc && vzrumple.sc) && 
-                               !(mean.tree.h.sc && vzrumple.sc) && 
-                               !(rumple.sc && vzrumple.sc))
+                               #!(basal.area.sc && stem.vol.sc) && 
+                               #!(max.height.sc && mean.tree.h.sc) && 
+                               #!(max.height.sc && vzrumple.sc) && 
+                               !(mean.tree.h.sc && vzrumple.sc)) 
+                               #!(rumple.sc && vzrumple.sc))
 
 #deviance
 fdiver_pt_models
@@ -2475,21 +2476,26 @@ cowplot::plot_grid(coefplot1, coefplot2, nrow = 2)
 
 ```{r}
 #setting global label mapping for forest structure metrics
-label_mappings <- c("mean.tree.h.sc" = "tree h",
+label_mappings <- c("mean.tree.h.sc" = "tree h mean",
                     "rumple.sc" = "rumple index",
-                    "zentropy.sc" = "vertical pt. dist.",
-                    "lad.max.sc" = "leaf area dens.",
+                    "zentropy.sc" = "vertical point\ndistribution",
+                    "lad.max.sc" = "leaf area\ndensity",
                     "CRR.rho.sc" = "canopy\nrelief ratio",
-                    "ClosedGapSpace.sc" = "gap vol.",
-                    "vFRcanopy.sc" = "veg. vol.",
+                    "ClosedGapSpace.sc" = "gap volume",
+                    "vFRcanopy.sc" = "vegetation\nvolume",
                     "sd.r.sc" = "tree h sd",
                     "max.height.sc" = "tree h max.",
-                    "stem.vol.sc" = "tree vol.",
+                    "stem.vol.sc" = "tree volume",
                     "mean.dbh.sc" = "tree dbh",
-                    "vzrumple.sc" = "vertical pt.\ncomplexity",
-                    "stand.dens.sc" = "tree dens.",
-                    "basal.area.sc" = "tree basal area",
-                    "pts.below.2m.sc" = "n pts.<2m")
+                    "vzrumple.sc" = "vertical point\ncomplexity",
+                    "stand.dens.sc" = "tree density",
+                    "basal.area.sc" = "basal area",
+                    "pts.below.2m.sc" = "terrestrial\nvegetation")
+
+#setting order
+metrics_order <- c("mean.tree.h.sc", "sd.r.sc", "mean.dbh.sc", "basal.area.sc",
+                   "stand.dens.sc", "stem.vol.sc", "pts.below.2m.sc", "lad.max.sc",
+                   "ClosedGapSpace.sc", "vFRcanopy.sc", "zentropy.sc", "vzrumple.sc")
 ```
 
 
@@ -2538,7 +2544,7 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
                                       expression("grid: 0.75 km"^2), 
                                       expression("grid: 1.7 km"^2))))
 
-#ggsave("rich_multiplot.jpg", plot = last_plot(), width = 7.5, height = 9.5, dpi = 500, device = "jpeg")
+#ggsave("rich_multiplot2.jpg", plot = last_plot(), width = 7, height = 8.5, dpi = 500, device = "jpeg")
 ```
 
 #### Shannon diversity
@@ -2566,10 +2572,6 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("shan_ct","shan_pt","shan_
 coef_df <- coef_df[!coef_df$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
 #plotting 
-metrics_order <- c("mean.tree.h.sc","rumple.sc","zentropy.sc","lad.max.sc","CRR.rho.sc",
-                   "ClosedGapSpace.sc","vFRcanopy.sc","sd.r.sc","max.height.sc","stem.vol.sc",
-                   "mean.dbh.sc","vzrumple.sc","stand.dens.sc","basal.area.sc","pts.below.2m.sc")
-
 ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_order)), color = model)) +
   geom_point(position = position_dodge(width = 0.5), size = 3) +
   geom_errorbar(aes(xmin = `2.5 %`, xmax = `97.5 %`), width = 0, 
@@ -2577,8 +2579,8 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
   geom_errorbar(aes(xmin = `25 %`, xmax = `75 %`), width = 0, 
                 position = position_dodge(width = 0.5), size = 1.5, linetype = "solid") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
-  geom_hline(yintercept = 8.5, color = "grey40") +
-  geom_hline(yintercept = 4.5, color = "grey40") +
+  #geom_hline(yintercept = 8.5, color = "grey40") +
+  #geom_hline(yintercept = 4.5, color = "grey40") +
   theme_classic() +
   labs(title = "",
        x = "coefficient estimate", y = "", color = "scale:") +
@@ -2586,15 +2588,15 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
         legend.text = element_text(size = 9)) +
   guides(color = guide_legend(reverse = TRUE)) +
   coord_cartesian(xlim = c(-3, 2.6)) +
-  annotate("text", x = 1.9, y = 12, 
-           label = "opposite direction\n of effects\n (eco. scales\n vs. grid scales)", 
-           color = "grey30", size = 3, fontface = "bold") +
-  annotate("text", x = 1.9, y = 6.5, 
-           label = "same direction\n of effects", 
-           color = "grey30", size = 3, fontface = "bold")  +
-  annotate("text", x = 1.9, y = 2.5, 
-           label = "mixed direction\n of effects", 
-           color = "grey30", size = 3, fontface = "bold") +
+  #annotate("text", x = 1.9, y = 12, 
+   #        label = "opposite direction\n of effects\n (eco. scales\n vs. grid scales)", 
+    #       color = "grey30", size = 3, fontface = "bold") +
+  #annotate("text", x = 1.9, y = 6.5, 
+   #        label = "same direction\n of effects", 
+    #       color = "grey30", size = 3, fontface = "bold")  +
+  #annotate("text", x = 1.9, y = 2.5, 
+   #        label = "mixed direction\n of effects", 
+    #       color = "grey30", size = 3, fontface = "bold") +
   scale_color_manual(values = rev(c("forestgreen", "darkgreen", "grey", "steelblue")),
                      labels = rev(c("eco: camera trap",
                                   "eco: forest type partition", 
@@ -2602,7 +2604,7 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
                                       expression("grid: 1.7 km"^2)))) +
   scale_y_discrete(labels = label_mappings)
 
-#ggsave("shan_multiplot.jpg", plot = last_plot(), width = 7.5, height = 9.5, dpi = 500, device = "jpeg")
+#ggsave("shan_multiplot.jpg", plot = last_plot(), width = 7, height = 8.5, dpi = 500, device = "jpeg")
 ```
 
 
@@ -2825,6 +2827,78 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
 #ggsave("fdiv_multiplot.jpg", plot = last_plot(), width = 7.5, height = 9.5, dpi = 500, device = "jpeg")
 ```
 
+#### Model comparison
+
+Shannon diversity models
+
+McFadden's R2 (pseudo R2)
+```{r}
+#get  top models
+top_shanCT <- get.models(shan_models, 1)[[1]]
+top_shanPT <- get.models(shan_pt_models, 1)[[1]]
+top_shan75 <- get.models(shan_75_models, 1)[[1]]
+top_shan170 <- get.models(shan_170_models, 1)[[1]]
+
+#create null model
+null_shanCT <- update(top_shanCT, . ~ 1)
+null_shanPT <- update(top_shanPT, . ~ 1)
+null_shan75 <- update(top_shan75, . ~ 1)
+null_shan170 <- update(top_shan170, . ~ 1)
+
+#compute pseudo R sqaured using McFadden's formula
+1 - as.numeric(logLik(top_shanCT) / logLik(null_shanCT))
+1 - as.numeric(logLik(top_shan75) / logLik(null_shan75))
+1 - as.numeric(logLik(top_shan170) / logLik(null_shan170))
+1 - as.numeric(logLik(top_shanPT) / logLik(null_shanPT))
+```
+
+Explained Deviance
+```{r}
+(deviance(null_shanCT) - deviance(top_shanCT)) / deviance(null_shanCT)
+(deviance(null_shan75) - deviance(top_shan75)) / deviance(null_shan75)
+(deviance(null_shan170) - deviance(top_shan170)) / deviance(null_shan170)
+(deviance(null_shanPT) - deviance(top_shanPT)) / deviance(null_shanPT)
+```
+
+Cross-validation
+Uses mean square error (MSE) to compare predictive performance (i.e., fits the data more robustly and generalizes better to new samples)
+```{r}
+library(boot)
+
+#partition models
+cv.glm(data = ct_div_mets_terr, glmfit = get.models(rich_pt_models, 1)[[1]], K = 11)$delta[[2]]   #60.8
+cv.glm(data = ct_div_mets_terr, glmfit = get.models(shan_pt_models, 1)[[1]], K = 11)$delta[[2]]   #1.10
+cv.glm(data = ct_div_mets_terr, glmfit = get.models(even_pt_models, 1)[[1]], K = 11)$delta[[2]]   #0.086
+cv.glm(data = ct_div_mets_terr, glmfit = get.models(fdiver_pt_models, 1)[[1]], K = 11)$delta[[2]] #0.176
+cv.glm(data = ct_div_mets_terr, glmfit = get.models(feven_pt_models, 1)[[1]], K = 11)$delta[[2]]  #0.038
+
+#grid models
+cv.glm(data = grid170_mets, glmfit = get.models(rich_170_models, 1)[[1]], K = 10)$delta[[2]]   #247.6
+cv.glm(data = grid170_mets, glmfit = get.models(shan_170_models, 1)[[1]], K = 10)$delta[[2]]   #1.89
+cv.glm(data = grid170_mets, glmfit = get.models(even_170_models, 1)[[1]], K = 10)$delta[[2]]   #0.198
+cv.glm(data = grid170_mets, glmfit = get.models(fdiver_170_models, 1)[[1]], K = 10)$delta[[2]] #0.420
+cv.glm(data = grid170_mets, glmfit = get.models(feven_170_models, 1)[[1]], K = 10)$delta[[2]]  #0.132
+```
+
+Comparing across models
+Deviance values are shown, again in parantheses to show the average deviance value to get to a cumulative model weight of at least 0.9
+
+partition model deviance ranges from 2.08 - 5.96, compared to 6.51 - 10.6 for the grid models
+```{r}
+#partition models
+get.models(rich_pt_models, 1)[[1]] #deviance = 2.08, wt = 1
+get.models(shan_pt_models, 1)[[1]] #deviance = 4.97 (5.22, n=2), wt = 0.859
+get.models(even_pt_models, 1)[[1]] #deviance = 5.96 (6.28, n=9), wt = 0.453
+get.models(fdiver_pt_models, 1)[[1]] #deviance = 4.27 (4.52, n=4), wt = 0.649
+get.models(feven_pt_models, 1)[[1]] #deviance = 3.809 (3.85, n=2), wt = 0.625
+
+get.models(rich_170_models, 1)[[1]] #deviance = 6.51, wt = 1
+get.models(shan_170_models, 1)[[1]] #deviance = 7.49, wt = 1
+get.models(even_170_models, 1)[[1]] #deviance = 8.15, wt = 1
+get.models(fdiver_170_models, 1)[[1]] #deviance = 8.56, wt = 1
+get.models(feven_170_models, 1)[[1]] #deviance = 10.62, wt = 1
+```
+
 
 ## Spatial heterogeneity in the grid systems compared to partitions
 
@@ -2904,7 +2978,8 @@ cowplot::plot_grid(p1, p2,nrow = 1, rel_widths = c(.4, .55))
 
 How does variation in structure metrics compare between scales?
 ```{r}
-metric_list_FD <- c(metric_list, "FRich", "FEven", "FDiver")
+metric_list2 <- sub("\\.sc$", "", metrics_order)
+metric_list_FD <- c(metric_list, metric_list2, "FRich", "FEven", "FDiver")
 stand_mets$study.area <- 1
 
 #function to calculate adjusted coefficient of variation
@@ -2966,7 +3041,7 @@ adjCV_mets %>%
          metric_label = recode(metric, 
                               "mean.tree.h" = "tree h",
                               "rumple" = "rumple",
-                              "zentropy" = "v dist.",
+                              "zentropy" = "vert. dist.",
                               "lad.max" = "LAD",
                               "CRR.rho" = "CRR",
                               "ClosedGapSpace" = "gap vol.",
@@ -2975,10 +3050,10 @@ adjCV_mets %>%
                               "max.height" = "tree h max.",
                               "stem.vol" = "tree vol.",
                               "mean.dbh" = "tree dbh",
-                              "vzrumple" = "v complex.",
+                              "vzrumple" = "vert. complex.",
                               "stand.dens" = "tree dens.",
                               "basal.area" = "basal area",
-                              "pts.below.2m" = "n pts<2m"),
+                              "pts.below.2m" = "terr. veg."),
          label_y = case_when(
            metric_label == "tree dens." ~ value + 0.01,
            metric_label == "veg. vol." ~ value + 0.01,
@@ -2999,7 +3074,7 @@ adjCV_mets %>%
                               "650 ha" = expression("6.5 km"^2), 
                               "study area" = expression("study area (26 km"^2*")")))
 
-#ggsave("adjCV_scales.jpg", plot = last_plot(), width = 6.5, height = 8, dpi = 500, device = "jpeg")
+#ggsave("adjCV_scales.jpg", plot = last_plot(), width = 7.5, height = 6, dpi = 500, device = "jpeg")
 ```
 
 
@@ -3032,14 +3107,14 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
                names_prefix = "adj_cv_") %>%
   mutate(metric_label = recode(metric, 
                                "mean.tree.h" = "tree h mean",
-                               "rumple" = "rumple index",
+                               #"rumple" = "rumple index",
                                "zentropy" = "vertical pt. dist.",
-                               "lad.max" = "lead area density",
-                               "CRR.rho" = "canopy relief ratio",
+                               "lad.max" = "leaf area density",
+                               #"CRR.rho" = "canopy relief ratio",
                                "ClosedGapSpace" = "gap volume",
                                "vFRcanopy" = "veg. vol.",
                                "sd.r" = "tree h sd",
-                               "max.height" = "tree h max.",
+                               #"max.height" = "tree h max.",
                                "stem.vol" = "tree volume",
                                "mean.dbh" = "tree dbh",
                                "vzrumple" = "vertical pt. complex.",
@@ -3051,9 +3126,9 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
 plot
 ```{r}
 #set order
-metrics_order2 <- c("tree h max.", "tree h", "CRR", "tree h sd", "tree dbh", "basal area",
-                    "tree dens.", "tree vol.", "n pts<2m", "v dist.", "LAD", "rumple", 
-                    "veg. vol.", "v complex.", "gap vol.")
+metrics_order2 <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", "tree volume",
+                    "terrestrial veg.", "leaf area density", "gap volume",  
+                    "veg. vol.", "vertical pt. dist.", "vertical pt. complex.")
 
 #remove diversity mets, set mets order
 adjCV_mets_long2 <- adjCV_mets_long2 %>%
@@ -3062,19 +3137,19 @@ adjCV_mets_long2 <- adjCV_mets_long2 %>%
 
 #set custom titles
 custom_titles <- c(
-  "tree h" = "tree h mean",
-  "CRR" = "canopy relief ratio",
+  "tree h mean" = "tree h mean",
+  #"CRR" = "canopy relief ratio",
   #"tree dbh" = "Tree Diameter",
   #"basal area" = "Basal Area",
-  "tree dens." = "tree density",
-  "tree vol." = "tree volume",
-  "n pts<2m" = "terrestrial veg.",
-  "v dist." = "vertical pt. dist.",
-  "LAD" = "leaf area density",
-  "rumple" = "canopy roughness",
-  "veg. vol." = "veg. volume",
-  "v complex." = "vertical pt. complex.",
-  "gap vol." = "gap volume")
+  "tree density" = "tree density",
+  "tree volume" = "tree volume",
+  "terrestrial veg." = "terrestrial veg.",
+  "vertical pt. dist." = "vertical pt. dist.",
+  "leaf area density" = "leaf area density",
+  #"rumple" = "canopy roughness",
+  "veg. vol." = "veg. vol.",
+  "vertical pt. complex." = "vertical pt. complex.",
+  "gap volume" = "gap volume")
 
 #plot using log scale x axis
 adjCV_mets_long2 %>%
@@ -3103,7 +3178,7 @@ adjCV_mets_long2 %>%
                 labels = c("0.75", "1.7", "6.5", "26")) +
   scale_color_manual(values = c("mean trend" = "grey30"))
 
-#ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 7.5, height = 9, dpi = 500, device = "jpeg")
+#ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 7.5, height = 8, dpi = 500, device = "jpeg")
 ```
 
 
