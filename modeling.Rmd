@@ -387,7 +387,7 @@ ct_div_mets_terr <- left_join(ct_div_mets_terr, fd_metrics_pt_df, by = "partitio
 ```
 
 
-## COMMUNITY METRICS VISUALIZATION
+## DIVERSITY METRICS VISUALIZATION
 
 ```{r, include=FALSE}
 #add habitat data to diversity metrics table
@@ -405,45 +405,7 @@ div_mets_viz$dataset <- "all"
 div_mets_viz <- rbind(div_mets_viz, div_mets_viz_scan)
 ```
 
-### Community metrics by CT location/forest type
-
-```{r eval=FALSE, fig.height=4, fig.width=10, include=FALSE}
-#plotting richness by all and scanned locations in same plot 
-cmp1 <- ggplot(div_mets_viz, aes(x = habitat, y = n.all, fill = dataset)) +
-  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
-  geom_jitter(position = position_dodge(width = 0.75)) +
-  scale_fill_manual(values = c("cornflowerblue","coral3")) +
-  theme_classic() +
-  labs(title = "Species Richness", x = "", y = "n species", fill = "") +
-  coord_flip() +
-  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
-
-#plotting diversity by all and scanned locations in same plot 
-cmp2 <- ggplot(div_mets_viz, aes(x = habitat, y = shannon_ct, fill = dataset)) +
-  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
-  geom_jitter(position = position_dodge(width = 0.75)) +
-  scale_fill_manual(values = c("cornflowerblue","coral3")) +
-  theme_classic() +
-  labs(title = "Shannon Diversity", x = "", y = "Shannon Diversity Index", fill = "") +
-  coord_flip() +
-  theme(legend.position = "none", axis.text.y = element_blank(), 
-        plot.title = element_text(hjust = 0.5))
-
-#plotting evenness by all and scanned locations in same plot 
-cmp3 <- ggplot(div_mets_viz, aes(x = habitat, y = div_even, fill = dataset)) +
-  geom_boxplot(position = position_dodge(width = 0.75), width = 0.5) +
-  geom_jitter(position = position_dodge(width = 0.75)) +
-  scale_fill_manual(values = c("cornflowerblue","coral3")) +
-  theme_classic() +
-  labs(title = "Species Evenness", x = "", y = "Evenness Index", fill = "") +
-  coord_flip() +
-  guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) +
-  theme(legend.position = "none", axis.text.y = element_blank(), 
-        plot.title = element_text(hjust = 0.5))
-
-#cowplot::plot_grid(p1, p2, p3, nrow = 1, rel_widths = c(.4, .3, .3))
-```
-
+### Diversity metrics by CT location/forest type
 
 ```{r fig.height=8, fig.width=10}
 #add forest type/partition and elevation data to FD mets table
@@ -467,7 +429,7 @@ cmp1 <- ggplot(div_mets[div_mets$n.all > 0,], aes(x = habitat, y = n.all, color 
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Richness") +
+  labs(title = "", x = "", y = "species richness") +
   coord_flip() +
   theme(legend.position = "none") + 
   scale_color_manual(values = ft_colors)
@@ -476,7 +438,7 @@ cmp2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = habitat, y = shannon_
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Shannon Diversity") +
+  labs(title = "", x = "", y = "Shannon diversity") +
   coord_flip() +
   theme(legend.position = "none",
          axis.text.y = element_blank()) + 
@@ -486,7 +448,7 @@ cmp3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = habitat, y = div_even, 
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Evenness") +
+  labs(title = "", x = "", y = "species evenness") +
   coord_flip() +
   theme(legend.position = "none",
          axis.text.y = element_blank()) + 
@@ -496,7 +458,7 @@ fdp1 <- ggplot(fd_metrics_df, aes(x = habitat, y = FRich, color = habitat)) +
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Func. Rich.") +
+  labs(title = "", x = "", y = "functional richness") +
   coord_flip() +
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = "none") + 
@@ -506,7 +468,7 @@ fdp2 <- ggplot(fd_metrics_df, aes(x = habitat, y = FEven, color = habitat)) +
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Func. Even.") +
+  labs(title = "", x = "", y = "functional evenness") +
   coord_flip() +
   theme(axis.text.y = element_blank(),
         legend.position = "none") + 
@@ -516,7 +478,7 @@ fdp3 <- ggplot(fd_metrics_df, aes(x = habitat, y = FDiver, color = habitat)) +
   geom_boxplot(width = 0.5, outlier.shape = NA) +
   geom_jitter(width = 0.1, size = 1) +
   theme_classic() +
-  labs(title = "", x = "", y = "Func. Diver.") +
+  labs(title = "", x = "", y = "functional divergence") +
   coord_flip() +
   theme(axis.text.y = element_blank(),
         legend.position = "none") + 
@@ -538,7 +500,7 @@ p1 <- ggplot(div_mets, aes(x = altitude, y = n.all, color = habitat)) +
   theme_classic() +
   theme(legend.position = "none",
         axis.text.x = element_blank()) + 
-  labs(title = "", x = "", y = "Richness")
+  labs(title = "", x = "", y = "species richness")
 
 #shannon diversity by elevation
 p2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = altitude, y = shannon_ct, color = habitat)) +
@@ -548,7 +510,7 @@ p2 <- ggplot(div_mets[div_mets$shannon_ct > 0,], aes(x = altitude, y = shannon_c
   theme_classic() +
   theme(legend.position = "none",
         axis.text.x = element_blank()) + 
-  labs(title = "", x = "", y = "Shannon Diversity")
+  labs(title = "", x = "", y = "Shannon diversity")
 
 #species evenness by elevation
 p3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = altitude, y = div_even, color = habitat)) +
@@ -558,7 +520,7 @@ p3 <- ggplot(div_mets[div_mets$div_even > 0,], aes(x = altitude, y = div_even, c
   theme_classic() +
   theme(legend.position = "none",
         axis.text.x = element_blank()) + 
-  labs(title = "", x = "", y = "Evenness")
+  labs(title = "", x = "", y = "species evenness")
 
 #functional richness
 p4 <- ggplot(fd_metrics_df, aes(x = altitude, y = FRich, color = habitat)) +
@@ -567,7 +529,7 @@ p4 <- ggplot(fd_metrics_df, aes(x = altitude, y = FRich, color = habitat)) +
   scale_color_manual(values = ft_colors) +
   theme_classic() +
   theme(legend.position = "none",) + 
-  labs(title = "", x = "", y = "Func. Rich.")
+  labs(title = "", x = "", y = "functional richness")
 
 p5 <- ggplot(fd_metrics_df, aes(x = altitude, y = FEven, color = habitat)) +
   geom_point() +
@@ -575,7 +537,7 @@ p5 <- ggplot(fd_metrics_df, aes(x = altitude, y = FEven, color = habitat)) +
   scale_color_manual(values = ft_colors) +
   theme_classic() +
   theme(legend.position = "none") + 
-  labs(title = "", x = "", y = "Func. Even.")
+  labs(title = "", x = "", y = "functional evenness")
 
 p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver, color = habitat)) +
   geom_point() +
@@ -583,7 +545,7 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver, color = habitat)) +
   scale_color_manual(values = ft_colors) +
   theme_classic() +
   theme(legend.position = "none") + 
-  labs(title = "", x = "elevation (m)", y = "Func. Diver.")
+  labs(title = "", x = "elevation (m)", y = "functional divergence")
 
 cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
 
@@ -847,9 +809,9 @@ df <- stand_mets[, c("mean.tree.h.sc", "sd.r.sc", "mean.dbh.sc", "basal.area.sc"
                      "zentropy.sc", "vzrumple.sc", "n.all", "shannon_ct", "div_even", "FEven", "FDiver")]
 
 colnames.list <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", 
-                   "stem volume", "near-ground veg.", "leaf area density", "gap volume", "veg. volume",
-                   "vertical pt. dist.", "vertical pt. complex.", "Species Richness", "Shannon Diversity", 
-                   "Species Evenness", "Funct. Evenness", "Funct. Divergence")
+                   "stem volume", "near ground vegetation", "leaf area density", "gap volume", "vegetation density",
+                   "vertical distribution", "vertical complexity", "species richness", "Shannon diversity",
+                   "species evenness", "funct. evenness", "funct. divergence")
 
 colnames(df) <- colnames.list 
 
@@ -874,7 +836,7 @@ corrplot(cor_matrix,
          number.font = 1,
          diag = FALSE)
 
-dev.off()
+#dev.off()
 ```
 
 
@@ -1092,11 +1054,12 @@ plot(even_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mamma
 Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+stand_mets_FD <- stand_mets[!is.na(stand_mets$FRich),]
+
 stand_mets_FD$stand.dens.sc <- as.numeric(stand_mets_FD$stand.dens.sc)
 stand_mets_FD$basal.area.sc <- as.numeric(stand_mets_FD$basal.area.sc)
 stand_mets_FD$mean.dbh.sc <- as.numeric(stand_mets_FD$mean.dbh.sc)
 
-stand_mets_FD <- stand_mets[!is.na(stand_mets$FRich),]
 
 frich_model <- glm(FRich ~ 
                 mean.tree.h.sc +
@@ -2524,20 +2487,20 @@ ggplot(aes(x = estimate, y = predictor, color = model)) +
 ```{r}
 #setting global label mapping for forest structure metrics
 label_mappings <- c("mean.tree.h.sc" = "tree h mean",
-                    "rumple.sc" = "rumple index",
-                    "zentropy.sc" = "vertical point\ndistribution",
+                    #"rumple.sc" = "rumple index",
+                    "zentropy.sc" = "vertical\ndistribution",
                     "lad.max.sc" = "leaf area\ndensity",
-                    "CRR.rho.sc" = "canopy\nrelief ratio",
+                    #"CRR.rho.sc" = "canopy\nrelief ratio",
                     "ClosedGapSpace.sc" = "gap volume",
-                    "vFRcanopy.sc" = "vegetation\nvolume",
+                    "vFRcanopy.sc" = "vegetation\ndensity",
                     "sd.r.sc" = "tree h sd",
-                    "max.height.sc" = "tree h max.",
+                    #"max.height.sc" = "tree h max.",
                     "stem.vol.sc" = "tree volume",
                     "mean.dbh.sc" = "tree dbh",
-                    "vzrumple.sc" = "vertical point\ncomplexity",
+                    "vzrumple.sc" = "vertical\ncomplexity",
                     "stand.dens.sc" = "tree density",
                     "basal.area.sc" = "basal area",
-                    "pts.below.2m.sc" = "near-ground\nvegetation")
+                    "pts.below.2m.sc" = "near ground\nvegetation")
 
 #setting order
 metrics_order <- c("mean.tree.h.sc", "sd.r.sc", "mean.dbh.sc", "basal.area.sc",
@@ -2811,7 +2774,6 @@ cv.glm(data = grid170_mets, glmfit = get.models(feven_170_models, 1)[[1]], K = 1
 
 Comparing deviance across top models
 
-partition model deviance ranges from 2.08 - 5.96, compared to 6.51 - 10.6 for the grid models
 ```{r}
 #partition models
 get.models(rich_pt_models, 1)[[1]] #deviance = 2.08, wt = 1
@@ -2905,7 +2867,7 @@ cp4 <- ggpredict(get.models(rich_models, 1)[[1]], terms = "vFRcanopy.sc") %>%
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "lightgreen", alpha = 0.3) +
   geom_line(color = "forestgreen", size = 1.2) +
   theme_classic() +
-  labs(x = "m³ (z)", y = "predicted species richness", title = "veg. vol.\n(camera trap)") +
+  labs(x = "m³ (z)", y = "predicted species richness", title = "vegetation density\n(camera trap)") +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylim(0, 68)
 
@@ -2915,7 +2877,7 @@ cp5 <- ggpredict(get.models(rich_pt_models, 1)[[1]], terms = "vFRcanopy.sc") %>%
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "green", alpha = 0.3) +
   geom_line(color = "darkgreen", size = 1.2) +
   theme_classic() +
-  labs(x = "m³ (z)", y = "", title = "veg. vol.\n(partition)") +
+  labs(x = "m³ (z)", y = "", title = "vegetation density\n(partition)") +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylim(0, 68)
 
@@ -2958,7 +2920,7 @@ cp9 <- ggpredict(get.models(rich_170_models, 1)[[1]], terms = "vzrumple.sc") %>%
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "lightblue", alpha = 0.3) +
   geom_line(color = "steelblue", size = 1.2) +
   theme_classic() +
-  labs(x = "vert. rumple (z)", y = "", title = "vertical pt. complex.\n(1.7 km² grid)") +
+  labs(x = "vert. rumple (z)", y = "", title = "vertical complexity\n(1.7 km² grid)") +
   theme(plot.title = element_text(hjust = 0.5)) +
   coord_cartesian(ylim = c(0, 68))
 ```
@@ -2996,11 +2958,7 @@ cowplot::plot_grid(
 ```
 
 
-
-
 ## Spatial heterogeneity in the grid systems compared to partitions
-
-How do forest types and partitions map on to the grid systems?
 
 ```{r}
 #read in the forest type and partitions by grid cell data
@@ -3128,7 +3086,7 @@ adjCV_mets <- bind_rows(summary_75ha %>% mutate(scale = "75 ha"),
 ```
 
 
-Figure showing how average adjusted coefficient of variation (which controls for number of camera trap locations in each cell) increases as grid size increases across the 15 forest structure metrics.
+Adjusted coefficient of variation increases as grid size increases across forest structure metrics.
 ```{r fig.height=7, fig.width=5}
 adjCV_mets %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
@@ -3138,23 +3096,20 @@ adjCV_mets %>%
                         levels = c("75 ha", "170 ha", "650 ha", "study area")),
          metric_label = recode(metric, 
                               "mean.tree.h" = "tree h",
-                              "rumple" = "rumple",
                               "zentropy" = "vert. dist.",
                               "lad.max" = "LAD",
-                              "CRR.rho" = "CRR",
                               "ClosedGapSpace" = "gap vol.",
-                              "vFRcanopy" = "veg. vol.",
+                              "vFRcanopy" = "veg. dens.",
                               "sd.r" = "tree h sd",
-                              "max.height" = "tree h max.",
                               "stem.vol" = "tree vol.",
                               "mean.dbh" = "tree dbh",
                               "vzrumple" = "vert. complex.",
                               "stand.dens" = "tree dens.",
                               "basal.area" = "basal area",
-                              "pts.below.2m" = "terr. veg."),
+                              "pts.below.2m" = "ground veg."),
          label_y = case_when(
            metric_label == "tree dens." ~ value + 0.01,
-           metric_label == "veg. vol." ~ value + 0.01,
+           metric_label == "veg. dens." ~ value + 0.01,
            metric_label == "tree h sd" ~ value + 0.01,
            TRUE ~ value)) %>%
   ggplot(aes(x = scale, y = value, group = metric, color = `75<SA`)) +
@@ -3205,42 +3160,30 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
                names_prefix = "adj_cv_") %>%
   mutate(metric_label = recode(metric, 
                                "mean.tree.h" = "tree h mean",
-                               "zentropy" = "vertical pt. dist.",
+                               "zentropy" = "vertical distribution",
                                "lad.max" = "leaf area density",
                                "ClosedGapSpace" = "gap volume",
-                               "vFRcanopy" = "veg. vol.",
+                               "vFRcanopy" = "vegetation density",
                                "sd.r" = "tree h sd",
                                "stem.vol" = "tree volume",
                                "mean.dbh" = "tree dbh",
-                               "vzrumple" = "vertical pt. complex.",
+                               "vzrumple" = "vertical complexity",
                                "stand.dens" = "tree density",
                                "basal.area" = "basal area",
-                               "pts.below.2m" = "terrestrial veg."))
+                               "pts.below.2m" = "near ground vegetation"))
 ```
 
 plot
 ```{r}
 #set order
-metrics_order2 <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", "tree volume",
-                    "terrestrial veg.", "leaf area density", "gap volume",  
-                    "veg. vol.", "vertical pt. dist.", "vertical pt. complex.")
+metrics_order2 <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", 
+                    "tree volume", "near ground vegetation", "leaf area density", "gap volume",  
+                    "vegetation density", "vertical distribution", "vertical complexity")
 
 #remove diversity mets, set mets order
 adjCV_mets_long2 <- adjCV_mets_long2 %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
   mutate(metric_label = factor(metric_label, levels = metrics_order2))
-
-#set custom titles
-custom_titles <- c(
-  "tree h mean" = "tree h mean",
-  "tree density" = "tree density",
-  "tree volume" = "tree volume",
-  "terrestrial veg." = "terrestrial veg.",
-  "vertical pt. dist." = "vertical pt. dist.",
-  "leaf area density" = "leaf area density",
-  "veg. vol." = "veg. vol.",
-  "vertical pt. complex." = "vertical pt. complex.",
-  "gap volume" = "gap volume")
 
 #plot using log scale x axis
 adjCV_mets_long2 %>%
@@ -3258,9 +3201,7 @@ adjCV_mets_long2 %>%
                  mutate(scale_numeric = 1.7), 
                fun = mean, geom = "errorbarh", aes(xmax = 2, xmin = 1.4), 
                color = "forestgreen", size = 1.2, height = 0) +
-  facet_wrap(~ metric_label, scales = "free_y",
-             labeller = labeller(metric_label = custom_titles), 
-             ncol = 3) +
+  facet_wrap(~ metric_label, scales = "free_y", ncol = 3) +
   labs(x = expression("spatial scale ("*km^2*")"), 
        y = "adjusted coefficient of variation") +
   theme_minimal() +
@@ -3269,11 +3210,11 @@ adjCV_mets_long2 %>%
                 labels = c("0.75", "1.7", "6.5", "26")) +
   scale_color_manual(values = c("mean trend" = "grey30"))
 
-#ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 7.5, height = 6, dpi = 500, device = "jpeg")
+#ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 6, height = 6, dpi = 500, device = "jpeg")
 ```
 
 
-Creating species table with observation counts and characteristic data used for calculating FD metrics
+Species table with observation counts and characteristic data used for calculating FD metrics
 ```{r}
 fd <- read.csv(file = "data/fd_chars.csv", header = TRUE, fileEncoding = "ISO-8859-1")
 obsbyft <- read.csv(file = "data/obs_by_ft.csv", header = TRUE)
