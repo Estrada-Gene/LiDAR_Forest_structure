@@ -2225,10 +2225,9 @@ sm_pt1 <- glm(Shannon ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1, m.max = 2, extra = "deviance",
-                      subset = !(mean.tree.h.sc && vzrumple.sc))
+shan_pt_models <- dredge(sm_pt1, m.max = 2, subset = !(mean.tree.h.sc && vzrumple.sc))
                               
-#deviance
+#summary
 shan_pt_models
 ```
 
@@ -2750,7 +2749,7 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
 #ggsave("fdiv_multiplot.jpg", plot = last_plot(), width = 7.5, height = 9.5, dpi = 500, device = "jpeg")
 ```
 
-#### Model comparison
+## Model comparison
 
 Cross-validation
 Uses mean square error (MSE) to compare predictive performance (i.e., fits the data more robustly and generalizes better to new samples)
@@ -2772,56 +2771,146 @@ cv.glm(data = grid170_mets, glmfit = get.models(fdiver_170_models, 1)[[1]], K = 
 cv.glm(data = grid170_mets, glmfit = get.models(feven_170_models, 1)[[1]], K = 10)$delta[[2]]  #0.132
 ```
 
-Comparing deviance across top models
-
+CV iterating across all candidate models and averaging by outcome variable, weighted based on overall model weight
 ```{r}
-#partition models
-get.models(rich_pt_models, 1)[[1]] #deviance = 2.08, wt = 1
-get.models(shan_pt_models, 1)[[1]] #deviance = 4.97 (5.22, n=2), wt = 0.859
-get.models(even_pt_models, 1)[[1]] #deviance = 5.96 (6.28, n=9), wt = 0.453
-get.models(fdiver_pt_models, 1)[[1]] #deviance = 4.27 (4.52, n=4), wt = 0.649
-get.models(feven_pt_models, 1)[[1]] #deviance = 3.81 (3.85, n=2), wt = 0.625
+get_weighted_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
+  models  <- get.models(dredge_obj, subset = TRUE)
+  weights <- dredge_obj$weight
+  safe_cv <- safely(function(mod) cv.glm(data = data, glmfit = mod, K = K)$delta[2])
+  
+  # containers
+  delta_vals <- numeric(length(models))
+  mae_vals <- rmse_vals <- rep(NA, length(models))
+  
+  for (i in seq_along(models)) {
+    mod <- models[[i]]
+    
+    # CV delta
+    cv_res <- safe_cv(mod)
+    delta_vals[i] <- ifelse(is.null(cv_res$result), NA, cv_res$result)
+    
+    # Prediction metrics
+    pred <- tryCatch(predict(mod, newdata = data, type = "response"), error = function(e) NA)
+    obs  <- mod$y
+    if (all(!is.na(pred))) {
+      mae_vals[i]  <- mean(abs(obs - pred), na.rm = TRUE)
+      rmse_vals[i] <- sqrt(mean((obs - pred)^2, na.rm = TRUE))
+    }
+  }
+  
+  ok <- !is.na(delta_vals)
+  if (verbose) message(sum(!ok), " models failed (", sum(ok), " succeeded)")
+  
+  # Weighted means
+  weighted <- function(x) weighted.mean(x[ok], weights[ok], na.rm = TRUE)
+  
+  return(tibble(
+    mean_cv_delta = weighted(delta_vals),
+    mean_MAE      = weighted(mae_vals),
+    mean_RMSE     = weighted(rmse_vals)
+  ))
+}
 
-get.models(rich_170_models, 1)[[1]] #deviance = 6.85, wt = 1
-get.models(shan_170_models, 1)[[1]] #deviance = 7.49, wt = 1
-get.models(even_170_models, 1)[[1]] #deviance = 8.15, wt = 1
-get.models(fdiver_170_models, 1)[[1]] #deviance = 8.56, wt = 1
-get.models(feven_170_models, 1)[[1]] #deviance = 10.62, wt = 1
+#list the forest type partition candidate model objects
+forest_models <- list(
+  rich = rich_pt_models,
+  shan = shan_pt_models,
+  even = even_pt_models,
+  fdiver = fdiver_pt_models,
+  feven = feven_pt_models)
+
+#list the 170 grid candidate model objects
+grid_models <- list(
+  rich = rich_170_models,
+  shan = shan_170_models,
+  even = even_170_models,
+  fdiver = fdiver_170_models,
+  feven = feven_170_models)
+
+
+forest_metrics <- map(forest_models, ~ get_weighted_metrics(ct_div_mets_terr, .x, K = 11))
+grid_metrics   <- map(grid_models,   ~ get_weighted_metrics(grid170_mets,   .x, K = 10))
+
+names(forest_metrics) <- c("rich", "shan", "even", "fdiver", "feven")
+names(grid_metrics)   <- c("rich", "shan", "even", "fdiver", "feven")
+
+forest_summary <- map_dfr(forest_metrics, bind_rows, .id = "metric") %>%
+  mutate(model_type = "forest")
+
+grid_summary <- map_dfr(grid_metrics, bind_rows, .id = "metric") %>%
+  mutate(model_type = "grid")
+
+combined_summary <- left_join(
+  forest_summary %>% rename_with(~ paste0(.x, "_forest"), -c(metric, model_type)),
+  grid_summary %>% rename_with(~ paste0(.x, "_grid"), -c(metric, model_type)),
+  by = "metric") %>%
+  dplyr::select(metric,
+         starts_with("mean_cv_delta"),
+         starts_with("mean_MAE"),
+         starts_with("mean_RMSE"))
+
+#write.csv(combined_summary, file = "CVmodelcompare_weighted.csv", row.names = FALSE)
 ```
 
 
-Comparing top model output
+Again without weighting averages
 ```{r}
-#function to return top model details
-extract_top_model <- function(dredge_obj, model_name) {
-  top_model <- get.models(dredge_obj, subset = 1)[[1]]
-  predictors <- names(coef(top_model))[-1] # exclude intercept
-  weight <- dredge_obj$weight[1]
-  data.frame(
-    Model = model_name,
-    Predictors = paste(predictors, collapse = ", "),
-    Weight = weight
-  )
+get_mean_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
+  models  <- get.models(dredge_obj, subset = TRUE)
+  safe_cv <- safely(function(mod) cv.glm(data = data, glmfit = mod, K = K)$delta[2])
+  
+  # containers
+  delta_vals <- numeric(length(models))
+  mae_vals <- rmse_vals <- rep(NA, length(models))
+  
+  for (i in seq_along(models)) {
+    mod <- models[[i]]
+    
+    # CV delta
+    cv_res <- safe_cv(mod)
+    delta_vals[i] <- ifelse(is.null(cv_res$result), NA, cv_res$result)
+    
+    # Prediction metrics
+    pred <- tryCatch(predict(mod, newdata = data, type = "response"), error = function(e) NA)
+    obs  <- mod$y
+    if (all(!is.na(pred))) {
+      mae_vals[i]  <- mean(abs(obs - pred), na.rm = TRUE)
+      rmse_vals[i] <- sqrt(mean((obs - pred)^2, na.rm = TRUE))
+    }
+  }
+  
+  ok <- !is.na(delta_vals)
+  if (verbose) message(sum(!ok), " models failed (", sum(ok), " succeeded)")
+  
+  # Unweighted (arithmetic) means
+  simple_mean <- function(x) mean(x[ok], na.rm = TRUE)
+  
+  return(tibble(
+    mean_cv_delta = simple_mean(delta_vals),
+    mean_MAE      = simple_mean(mae_vals),
+    mean_RMSE     = simple_mean(rmse_vals)
+  ))
 }
 
-#create model list
-model_list <- list(
-  Rich_170 = rich_170_models,
-  Shan_170 = shan_170_models,
-  Even_170 = even_170_models,
-  FEven_170 = feven_170_models,
-  FDiver_170 = fdiver_170_models,
-  Rich_pt = rich_pt_models,
-  Shan_pt = shan_pt_models,
-  Even_pt = even_pt_models,
-  FEven_pt = feven_pt_models,
-  FDiver_pt = fdiver_170_models)
+forest_metrics <- map(forest_models, ~ get_mean_metrics(ct_div_mets_terr, .x, K = 11))
+grid_metrics   <- map(grid_models,   ~ get_mean_metrics(grid170_mets,   .x, K = 10))
 
-top_model_summary <- imap_dfr(model_list, extract_top_model)
+# Convert to data frames
+forest_summary <- map_dfr(forest_metrics, bind_rows, .id = "metric") %>%
+  rename_with(~ paste0(.x, "_forest"), -metric)
 
-top_model_summary
+grid_summary <- map_dfr(grid_metrics, bind_rows, .id = "metric") %>%
+  rename_with(~ paste0(.x, "_grid"), -metric)
 
-#write.csv(top_model_summary, file = "TopModelSummary.csv")
+# Combine for side-by-side comparison
+combined_summary <- left_join(forest_summary, grid_summary, by = "metric") %>%
+  dplyr::select(
+    metric,
+    mean_cv_delta_forest, mean_cv_delta_grid,
+    mean_MAE_forest,      mean_MAE_grid,
+    mean_RMSE_forest,     mean_RMSE_grid)
+
+#write.csv(combined_summary, file = "CVmodelcompare_NotWeighted.csv", row.names = FALSE)
 ```
 
 
@@ -2959,7 +3048,6 @@ cowplot::plot_grid(
 
 
 ## Spatial heterogeneity in the grid systems compared to partitions
-
 ```{r}
 #read in the forest type and partitions by grid cell data
 grid_int <- read.csv(file = "data/grids_intersect.csv", header = TRUE)
