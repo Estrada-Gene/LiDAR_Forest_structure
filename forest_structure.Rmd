@@ -51,6 +51,7 @@ all_stand_mets <- read.csv(file = "data/all.stand.mets.csv", header = TRUE)
 #changing default setting in ggplot to center plot titles
 theme_update(plot.title = element_text(hjust = 0.5))
 
+#custom color scheme
 ft_colors <- c("Peat Swamp" = "#401D00", 
                       "Freshwater Swamp" = "#643E00", 
                       "Alluvial Bench" = "#896007", 
@@ -63,12 +64,6 @@ ft_colors <- c("Peat Swamp" = "#401D00",
 ## Correlations between variables
 ```{r warning=FALSE}
 chart.Correlation(stand_mets[,c(5:16,21:29)], histogram = TRUE, pch = 19)
-```
-
-## On- and Off-trail scans
-by forest type
-```{r}
-table(stand_mets$habitat, stand_mets$on.off.trail)
 ```
 
 ## Plotting forest structure metrics by forest type
@@ -110,8 +105,7 @@ p1 <- ggplot(stand_mets, aes(altitude, mean.tree.h, color = habitat)) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5, size = title_size),
         axis.text.x = element_blank(),
-        axis.title.y = element_text(size = axis_title_size),
-        legend.position = "none")
+        axis.title.y = element_text(size = axis_title_size))
 ```
 
 ### Standard deviation of tree heights
@@ -164,7 +158,7 @@ summary(stand_mets$mean.dbh)
 plot3 <- ggplot(stand_mets, aes(habitat, mean.dbh, color = habitat)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.1) + 
-  labs(title = "tree dbh", x = "", y = "diameter (cm)") + 
+  labs(title = "tree dbh mean", x = "", y = "diameter (cm)") + 
   coord_flip() + 
   theme_classic() +
   theme(axis.text.y = element_blank(),
@@ -179,7 +173,7 @@ p3 <- ggplot(stand_mets, aes(altitude, mean.dbh, color = habitat)) +
   geom_smooth(se = TRUE, aes(color = NULL)) +
   scale_color_manual(values = ft_colors) +
   scale_y_continuous(labels = number_format(accuracy = 1)) +
-  labs(title = "tree dbh", x = "", y = "diameter (cm)") + 
+  labs(title = "tree dbh mean", x = "", y = "diameter (cm)") + 
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5, size = title_size),
         axis.text.x = element_blank(),
@@ -190,7 +184,7 @@ p3 <- ggplot(stand_mets, aes(altitude, mean.dbh, color = habitat)) +
 
 ### Basal area
 ```{r}
-#distribution - some outliers on the upper end, pulling the mean higher
+#distribution
 hist(stand_mets$basal.area, breaks = 25,
      main = "Tree Basal Area", xlab = expression(m^2/ha))
 
@@ -260,11 +254,11 @@ p5 <- ggplot(stand_mets, aes(altitude, stand.dens, color = habitat)) +
 
 ### Tree volume 
 ```{r}
-#distribution - outliers on upper end
+#distribution
 hist(stand_mets$stem.vol, breaks = 25,
      main = "Tree Volume", xlab = expression(m^3/ha))
 
-#summary stats - mean quite a bit higher than median
+#summary stats
 summary(stand_mets$stem.vol)
 
 #by forest type
@@ -295,7 +289,7 @@ p6 <- ggplot(stand_mets, aes(altitude, stem.vol, color = habitat)) +
 
 ### Number of points below 2 m
 ```{r}
-#distribution - seems to be one outlier (BC 2.19)
+#distribution
 hist(stand_mets$pts.below.2m, breaks = 25,
      main = "Terrestrial Vegetation", xlab = "n pts. < 2 m")
 
@@ -402,7 +396,6 @@ p8 <- ggplot(stand_mets, aes(altitude, lad.max, color = habitat)) +
 
 
 ### Vegetation density
-vFRcanopy metric is the ratio of 'filled' to 'all' voxels (1 cubic m)
 ```{r}
 #distribution
 hist(stand_mets$vFRcanopy, breaks = 25, las = 1,
@@ -519,14 +512,37 @@ cowplot::plot_grid(plot1, plot2, plot3, plot4, plot5, plot6, plot7, plot8, plot9
 
 elevation plot grid
 ```{r}
-cowplot::plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, nrow = 4)
+#dummy for legend extraction
+p1_for_legend <- p1 + 
+  geom_smooth(se = TRUE, aes(color = NULL), show.legend = FALSE) +
+  guides(color = guide_legend(
+    title = NULL, 
+    reverse = TRUE,
+    nrow = 1,                          
+    override.aes = list(fill = NA, linetype = 0, shape = 16)
+  )) +
+  theme(legend.key = element_rect(fill = NA),
+    legend.key.width = unit(0.2, "cm"), 
+    legend.spacing.x = unit(0.1, "cm"),
+    legend.box.margin = margin(-10, 0, 0, 0),
+    legend.text = element_text(margin = margin(r = 2, unit = "pt")))
 
-#ggsave("FS_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 8, dpi = 500, device = "jpeg")
+#extract legend
+legend <- cowplot::get_legend(p1_for_legend)
+
+#create grid
+panel_grid1 <- cowplot::plot_grid(p1 + theme(legend.position = "none"), p2, p3, 
+                                  p4, p5, p6, p7, p8, p9, p10, p11, p12, nrow = 4)
+
+#add legend
+cowplot::plot_grid(panel_grid1, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+#ggsave("FS_by_elev_multiplot2.jpg", plot = last_plot(), width = 7.5, height = 8, dpi = 500, device = "jpeg")
 ```
 
 ## All trees metrics
 
-Using metrics from individual trees from all scans. Total of 2,010 trees detected by the FORTLS functions.
+Using metrics from individual trees from all scans. Total of 2,010 trees detected by the FORTLS package.
 ```{r}
 #tree h
 mean_h <- mean(tree_mets$h, na.rm = TRUE)
@@ -556,7 +572,7 @@ t2 <- ggplot(tree_mets, aes(dbh)) +
   #annotate("text", x = 100, y = 92, label = paste("mean:", round(mean_dbh, 2), 
   #                                                  "\nSD:", round(sd_dbh, 2)),
   #         hjust = 0.8, size = 4, color = "grey10") +
-  labs(title = "tree dbh", x = "diameter (cm)", y = "") +
+  labs(title = "tree dbh mean", x = "diameter (cm)", y = "") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -599,14 +615,14 @@ t1 <- ggplot(tree_mets, aes(x = altitude, y = h, color = habitat)) +
   scale_color_manual(values = ft_colors) + 
   labs(title = "tree height", x = "elevation (m)", y = "height (m)") + 
   theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+  theme(plot.title = element_text(hjust = 0.5))
 
 #tree dbh
 t2 <- ggplot(tree_mets, aes(x = altitude, y = dbh, color = habitat)) +
   geom_jitter(width = 5) +
   geom_smooth(se = TRUE, aes(color = NULL)) +
   scale_color_manual(values = ft_colors) + 
-  labs(title = "tree dbh", x = "elevation (m)", y = "diameter (cm)") + 
+  labs(title = "tree dbh mean", x = "elevation (m)", y = "diameter (cm)") + 
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 
@@ -630,7 +646,29 @@ t4 <- ggplot(tree_mets, aes(x = altitude, y = v, color = habitat)) +
         legend.position = "none") + 
   ylim(2, max(tree_mets$v))
 
-cowplot::plot_grid(t1, t2, t3, t4, nrow = 1)
+#dummy plot for legend extraction
+t1_for_legend <- t1 + 
+  geom_smooth(se = TRUE, aes(color = NULL), show.legend = FALSE) +
+  guides(color = guide_legend(
+    title = NULL, 
+    reverse = TRUE,
+    nrow = 1,                          
+    override.aes = list(fill = NA, linetype = 0, shape = 16)
+  )) +
+  theme(legend.key = element_rect(fill = NA),
+    legend.key.width = unit(0.2, "cm"), 
+    legend.spacing.x = unit(0.1, "cm"),
+    legend.box.margin = margin(-10, 0, 0, 0),
+    legend.text = element_text(margin = margin(r = 2, unit = "pt")))
 
-#ggsave("tree_mets_elev.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
+#extract legend
+legend <- cowplot::get_legend(t1_for_legend)
+
+#create grid
+panel_grid1 <- cowplot::plot_grid(t1 + theme(legend.position = "none"), t2, t3, t4, nrow = 1)
+
+#add legend
+cowplot::plot_grid(panel_grid1, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+#ggsave("tree_mets_elev2.jpg", plot = last_plot(), width = 7.5, height = 3, dpi = 500, device = "jpeg")
 ```
