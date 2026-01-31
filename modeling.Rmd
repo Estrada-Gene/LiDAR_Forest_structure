@@ -1,5 +1,5 @@
 ---
-title: "modeling terrestrial mammal diversity at GPNP"
+title: "Ecologically defined scales outperform grids in models of mammal diversity"
 author: "Gene Estrada"
 date: "2024-05-21"
 output: html_document
@@ -34,7 +34,7 @@ library(spmoran)
 library(corrplot)
 library(ggeffects)
 
-#mammal observation data - excludes all human observations
+#mammal observation data (excludes all human observations)
 m <- read.csv(file = "data/pruned.csv", header = TRUE)
 m <- m[,-1]
 
@@ -45,11 +45,11 @@ ct <- read.csv(file = "data/CTlocations_partitions_May2024.csv", header = TRUE)
 m <- m[,-c(12:14)]
 m <- left_join(m, ct[,c("locationID","latitude","longitude","habitat","partition")], by = "locationID")
 
-#ordering forest type
+#ordering forest type by increasing elevation
 m$habitat <- factor(m$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
                                           "Lowland Sandstone", "Lowland Granite", "Upland Granite", "Montane"),
                     ordered = TRUE)
-#ordering partitions
+#ordering FT partitions by increasing elevation
 m$partition <- factor(m$partition, levels = c("PS1", "FS1", "AB1", "AB2",
                                           "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
                     ordered = TRUE)
@@ -63,7 +63,7 @@ stand_mets$partition <- factor(stand_mets$partition, levels = c("PS1", "FS1", "A
                                               "LS1", "LS2","LG1","LG2", "UG1","UG2", "MO1", "MO2"),
                       ordered = TRUE)
 
-#all tree metrics
+#individual tree metrics
 tree_mets <- read.csv(file = "data/all.tree.mets.csv", header = TRUE)
 tree_mets$habitat <- factor(tree_mets$habitat, levels = c("Peat Swamp", "Freshwater Swamp", "Alluvial Bench", 
                                                             "Lowland Sandstone", "Lowland Granite",
@@ -76,7 +76,7 @@ tree_mets$partition <- factor(tree_mets$partition, levels = c("PS1", "FS1", "AB1
 ct_elev <- read.csv(file = "data/cameradata_updatedZJ-ajm.csv", header = TRUE)
 ct_elev <- ct_elev[!duplicated(ct_elev$locationID),]
 
-#add CT survey effort data
+#camera trap survey effort data
 ct2 <- read.csv(file = "data/ofp_deployments-2021-11-04.csv", header = TRUE)
 ct_active_days <- ct2 %>%
   dplyr::select(Deployment.Location.ID, Camera.Deployment.Begin.Date, Camera.Deployment.End.Date) %>%
@@ -90,11 +90,11 @@ ct_active_days <- ct2 %>%
 
 stand_mets <- left_join(stand_mets, ct_active_days, by = "locationID") 
 
-#adding PanTheria terrestriality data
+#PanTheria terrestriality data
 traits <- read.csv(file = "data/mammal_list_ct_trait_202405.csv", header = TRUE)
 m <- left_join(m, traits[,c("Species","Terrestriality")], by = "Species")
 
-#read terrestrial mammal traits data
+#terrestrial mammal traits data
 terr_traits <- read.csv(file = "data/mammal_traits_terr.csv", header = TRUE)
 ```
 
@@ -102,7 +102,7 @@ terr_traits <- read.csv(file = "data/mammal_traits_terr.csv", header = TRUE)
 
 ### Entire Study Area
 
-Excluding arboreal mammals, dogs, and taxa not identified to species level (Muntiacus spp., Tragulus spp. and Unid civets). All camera trap locations: 36 total species.
+Excluding arboreal mammals, dogs, and taxa not identified to species level (e.g., Muntiacus spp., Tragulus spp., and Unid civets).
 
 ```{r}
 #list of taxa not ID'd to species level, to exclude from some analyses
@@ -115,32 +115,9 @@ m %>%
   summarise(SpeciesRichness = n_distinct(Species))
 ```
 
-
-### By forest type
+### By FT partition - terrestrial mammals only
 ```{r}
-#all ct locations
-#n_by_ft <- m %>%
- # group_by(habitat) %>%
-  #filter(Terrestriality == 1 &
-   #      !Species %in% unid_taxa) %>%
-  #summarise(n.all = n_distinct(Species)) %>%
-  #arrange(desc(habitat))
-```
-
-### By partition
-```{r}
-#all ct locations
-#n_by_pt <- m %>%
- # group_by(partition) %>%
-  #filter(Terrestriality == 1 &
-   #      !Species %in% unid_taxa) %>%
-  #summarise(n.all = n_distinct(Species)) %>%
-  #arrange(desc(partition))
-```
-
-### By partition - terrestrial mammals only
-```{r}
-#selecting terrestrial mammals only, removing obs not identified to species
+#selecting terrestrial mammals, removing obs not identified to species
 m_filtered <- m %>%
   filter(Terrestriality == 1 &
          !Species %in% unid_taxa)
@@ -150,16 +127,6 @@ ct_div_mets_terr <- m_filtered %>%
   group_by(partition) %>%
   summarise(n.terr = n_distinct(Species)) %>%
   arrange(desc(partition))
-
-#just using scanned CT locations for comparison ##################### cor is pretty low
-m_filtered %>%
-  filter(locationID %in% stand_mets$locationID) %>%
-  group_by(partition) %>%
-  summarise(n.terr.scan = n_distinct(Species)) %>%
-  arrange(desc(partition)) %>%
-  left_join(ct_div_mets_terr) %>%
-  mutate(diff = n.terr - n.terr.scan) %>%
-  { with(., cor(n.terr, n.terr.scan, method = "spearman")) }
 ```
 
 ### By camera trap location
@@ -203,7 +170,7 @@ cor(shannon_pt$shannon_all, shannon_pt$shannon_scan, method = "pearson")  #0.96
 cor(shannon_pt$shannon_all, shannon_pt$shannon_scan, method = "spearman") #0.94
 ```
 
-Creating Shannon diversity metrics for terrestrial mammals only, for all partitions and partitions with montane aggregate
+Creating Shannon diversity metrics for terrestrial mammals for all partitions
 
 ```{r}
 ### All partitions
@@ -214,16 +181,6 @@ colnames(shan_terr)[1] <- "Shannon"
 shan_terr <- rownames_to_column(shan_terr, var = "partition")
 ct_div_mets_terr <- left_join(ct_div_mets_terr, shan_terr, by = "partition")
 rm(shan_terr)
-
-#aggregated montane
-#m_filtered_agg <- m_filtered %>%
- # mutate(partition = case_when(partition %in% c("MO1", "MO2") ~ "MO", TRUE ~ as.character(partition)))
-
-#shan_terr <- as.data.frame(diversity(table(m_filtered_agg$partition, m_filtered_agg$Species)))
-#colnames(shan_terr)[1] <- "Shannon"
-#shan_terr <- rownames_to_column(shan_terr, var = "partition")
-#ct_div_mets_terr_mod <- left_join(ct_div_mets_terr_mod, shan_terr, by = "partition")
-#rm(shan_terr)
 ```
 
 ### By forest type
@@ -243,7 +200,6 @@ rm(shannon_scan, shannon_all)
 
 #calculating difference between all and scanned locations shannon index
 shannon_ft$diff <- shannon_ft$shannon_all - shannon_ft$shannon_scan
-shannon_ft
 ```
 
 ## SPECIES EVENNESS
@@ -268,9 +224,6 @@ Pielou's diversity measure of species evenness
 
 ```{r}
 ct_div_mets_terr$evenness <- ct_div_mets_terr$Shannon / log(ct_div_mets_terr$n.terr)
-
-#not running for now since I don't need this modified montane partition 
-#ct_div_mets_terr_mod$evenness <- ct_div_mets_terr_mod$Shannon / log(ct_div_mets_terr_mod$n.terr)
 ```
 
 adding diversity metrics to forest structure metrics df
@@ -323,9 +276,6 @@ terr_traits_trim$TrophicLevel <- as.factor(terr_traits_trim$TrophicLevel)
 #estimating functional diversity metrics
 fd_metrics <- dbFD(terr_traits_trim, obs_table)
 
-#fd metrics not calculated for CT locations with < 3 species (n = 12/172)
-#table(is.na(fd_metrics$FRic))
-
 #subset of metrics of interest
 fd_metrics_df <- data.frame(
   locationID = as.integer(rownames(as.data.frame(fd_metrics$FRic))), 
@@ -336,9 +286,6 @@ fd_metrics_df <- data.frame(
 
 #add to metrics table
 stand_mets <- left_join(stand_mets, fd_metrics_df, by = "locationID")
-
-#one scanned location is missing FD metric data: TL 26 S40, LG1
-#stand_mets[is.na(stand_mets$FRich),]
 ```
 
 
@@ -360,9 +307,6 @@ obs_table_pt <- ct_active_days %>%
   group_by(partition) %>%
   summarise(act.days = sum(act.days)) %>%
   left_join(obs_table_pt, ., by = "partition")
-
-#standardizing by survey effort and assigning partition to row names
-#obs_table_pt <- obs_table_pt %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_pt <- as.data.frame(obs_table_pt)
 rownames(obs_table_pt) <- obs_table_pt$partition
@@ -484,7 +428,9 @@ fdp3 <- ggplot(fd_metrics_df, aes(x = habitat, y = FDiver, color = habitat)) +
         legend.position = "none") + 
   scale_color_manual(values = ft_colors)
 
-cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2, nrow = 2, rel_widths = c(.47, .3, .3))
+#multiplot
+cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2,
+                   nrow = 2, rel_widths = c(.47, .3, .3))
 
 #ggsave("DivMets_by_FT_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
@@ -492,14 +438,13 @@ cowplot::plot_grid(cmp1, cmp2, cmp3, fdp1, fdp3, fdp2, nrow = 2, rel_widths = c(
 ### Community metrics by elevation
 
 ```{r fig.height=4, fig.width=10}
-#species richness by elevation - 'all CT locations' and "scanned locations' in the same plot
+#species richness by elevation 
 p1 <- ggplot(div_mets, aes(x = altitude, y = n.all, color = habitat)) +
   geom_jitter(height = 0.2) +
   geom_smooth(se = TRUE, aes(color = NULL)) +  
   scale_color_manual(values = ft_colors) +
   theme_classic() +
-  theme(legend.position = "none",
-        axis.text.x = element_blank()) + 
+  theme(axis.text.x = element_blank()) + 
   labs(title = "", x = "", y = "species richness")
 
 #shannon diversity by elevation
@@ -531,6 +476,7 @@ p4 <- ggplot(fd_metrics_df, aes(x = altitude, y = FRich, color = habitat)) +
   theme(legend.position = "none",) + 
   labs(title = "", x = "", y = "functional richness")
 
+#functional evenness
 p5 <- ggplot(fd_metrics_df, aes(x = altitude, y = FEven, color = habitat)) +
   geom_point() +
   geom_smooth(se = TRUE, aes(color = NULL)) +  
@@ -539,6 +485,7 @@ p5 <- ggplot(fd_metrics_df, aes(x = altitude, y = FEven, color = habitat)) +
   theme(legend.position = "none") + 
   labs(title = "", x = "", y = "functional evenness")
 
+#functional divergence
 p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver, color = habitat)) +
   geom_point() +
   geom_smooth(se = TRUE, aes(color = NULL)) +  
@@ -547,9 +494,32 @@ p6 <- ggplot(fd_metrics_df, aes(x = altitude, y = FDiver, color = habitat)) +
   theme(legend.position = "none") + 
   labs(title = "", x = "elevation (m)", y = "functional divergence")
 
-cowplot::plot_grid(p1,p2,p3,p4,p6,p5, nrow = 2)
+#dummy for legend extraction
+p1_for_legend <- p1 + 
+  geom_smooth(se = TRUE, aes(color = NULL), show.legend = FALSE) +
+  guides(color = guide_legend(
+    title = NULL, 
+    reverse = TRUE,
+    nrow = 1,                          
+    override.aes = list(fill = NA, linetype = 0, shape = 16)
+  )) +
+  theme(legend.key = element_rect(fill = NA),
+    legend.key.width = unit(0.2, "cm"), 
+    legend.spacing.x = unit(0.1, "cm"),
+    legend.box.margin = margin(-10, 0, 0, 0),
+    legend.text = element_text(margin = margin(r = 2, unit = "pt")))
 
-#ggsave("DivMets_by_elev_multiplot.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
+#extract legend
+legend <- cowplot::get_legend(p1_for_legend)
+
+#create grid
+panel_grid1 <- cowplot::plot_grid(p1 + theme(legend.position = "none"), p2, p3, 
+                                  p4, p6, p5, nrow = 2)
+
+#add legend
+cowplot::plot_grid(panel_grid1, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+#ggsave("DivMets_by_elev_multiplot2.jpg", plot = last_plot(), width = 7.5, height = 5, dpi = 350, device = "jpeg")
 ```
 
 
@@ -575,7 +545,7 @@ neighbors <- dnearneigh(coords, 0, threshold)
 #binary weights for neighbors
 weights <- nb2listw(neighbors, style = "W")
 
-#function to calculate Moran's I and Geary's C
+#function to calculate Moran's I
 calculate_morans_i <- function(variable, weights) {
   moran_test <- moran.test(variable, weights)
   list(Moran_I = moran_test$estimate[1],
@@ -599,7 +569,7 @@ spac_mets <- map_dfr(metric_list, function(col) {
          Significant = metrics$P_value < 0.05)
 })
 
-#again for functional metrics because there's one less observation point, have to run separately
+#again for functional metrics
 f_metrics_list <- c("FRich", "FEven", "FDiver")
 stand_mets_func <- stand_mets[complete.cases(stand_mets[, c("FRich", "FEven", "FDiver")]),
                               c("FRich", "FEven", "FDiver", "longitude", "latitude")]
@@ -631,7 +601,7 @@ spac_mets %>%
 ```
 
 
-Extracting Moran's eigenvector values to use in glm to control for spatial autocorrelation
+Extracting Moran's eigenvector values to use in models
 ```{r}
 #convert data to sf object
 data_sf <- st_as_sf(stand_mets, coords = c("longitude", "latitude"), crs = 4326)
@@ -778,29 +748,6 @@ stand_mets <- stand_mets %>%
   mutate(across(c(5:16, 22:25, 27:29, 37), scale, .names = "{.col}.sc"))
 ```
 
-#### Descriptions of forest structure metrics used in models
-
-I used {FORTLS} to extract the following metrics:
-
-1.  max.height - maximum height of trees in the stand, in m
-2.  mean.tree.h - mean tree height in the stand, in m.
-3.  CRR.rho - canopy relief ratio, using rho for horizontal distance. A measure of canopy variation, with lower scores indicating lower local variation in canopy surface, i.e., more uniform age canopy/ less canopy surface complexity.
-4.  sd.r - standard deviation of tree heights in stand in m. I've seen this value used as an approximation for vertical stratification.
-5.  mean.dbh - mean diameter at breast height of trees in stand, in cm (measured at height of 1.3m)
-6.  basal.area - basal area of trees in the stand (m2/ha)
-7.  stand.dens - density of trees in the stand (trees/ha)
-8.  stem.vol - volume of trees in the stand (m3/ha)
-9.  pts.below.2m - shows the number of points in the point cloud that are below 2m.
-
-I used {lidr} and {lidRmetrics} to extract the following metrics:
-
-10. zentropy - normalized Shannon diversity index of z (height) values. Describes vertical complexity.
-11. lad.max - Leaf Area Density maximum value for 1m vertical bins. Describes maximum foliage cover of the point cloud.
-12. rumple - Rumple index (rugosity), a ratio of the canopy surface area to it's projected ground area.
-vn - number of 1m voxels created for the following volumetric metrics.
-13. vFRcanopy - ratio of filled to empty voxels, only counting cells within and below canopy, ignoring above.
-14. vzrumple - vertical Rumple index.
-15. ClosedGapSpace - volume of voxels that are classified as gaps underneath the canopy
 
 #### Correlation between community metrics and predictors.
 ```{r}
@@ -808,7 +755,7 @@ df <- stand_mets[, c("mean.tree.h.sc", "sd.r.sc", "mean.dbh.sc", "basal.area.sc"
                      "stem.vol.sc", "pts.below.2m.sc", "lad.max.sc", "ClosedGapSpace.sc", "vFRcanopy.sc",
                      "zentropy.sc", "vzrumple.sc", "n.all", "shannon_ct", "div_even", "FEven", "FDiver")]
 
-colnames.list <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", 
+colnames.list <- c("tree h mean", "tree h sd", "tree dbh mean", "basal area", "tree density", 
                    "stem volume", "near ground vegetation", "leaf area density", "gap volume", "vegetation density",
                    "vertical distribution", "vertical complexity", "species richness", "Shannon diversity",
                    "species evenness", "funct. evenness", "funct. divergence")
@@ -841,7 +788,7 @@ corrplot(cor_matrix,
 
 
 ### Models by camera trap location
-Fitting global model then using {dredge} to find models of best fit
+Fitting global model then using {dredge} to create candidate models
 ```{r}
 stand_mets$log.act.days <- log(stand_mets$act.days)
 ```
@@ -857,7 +804,7 @@ stand_mets$stand.dens.sc <- as.numeric(stand_mets$stand.dens.sc)
 stand_mets$basal.area.sc <- as.numeric(stand_mets$basal.area.sc)
 
 
-#fitting global model for use in dredge
+#global model
 rm1 <- glm(n.all ~  
              mean.tree.h.sc +
              sd.r.sc +
@@ -877,11 +824,10 @@ rm1 <- glm(n.all ~
            offset = log.act.days,
            data = stand_mets)
 #dredge
-rich_models <- dredge(rm1, m.max = 2, extra = "deviance",
+rich_models <- dredge(rm1, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
-#deviance
 rich_models
 ```
 
@@ -915,35 +861,10 @@ plot(rich_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mamma
 ```
 
 
-```{r}
-#plot comparing full model to model averaged outputs
-bind_rows(broom::tidy(rm1) %>%
-            filter(term != "(Intercept)", term != "eigenvectors.sc", !grepl("^partition", term)) %>%
-            mutate(model = "full model"),
-          summary(rich_models_avg)$coefmat.subset %>%
-            as.data.frame() %>%
-            rownames_to_column("term") %>%
-            filter(term != "(Intercept)", term != "eigenvectors.sc", !grepl("^partition", term)) %>%
-            rename(estimate = Estimate, std.error = `Std. Error`) %>%
-            mutate(model = "averaged model")) %>%
-  ggplot(aes(x = reorder(term, -estimate), y = estimate, color = model)) +
-  geom_errorbar(aes(ymin = estimate - std.error,
-                    ymax = estimate + std.error),
-                width = 0, position = position_dodge(width = 0.5)) +
-  geom_point(position = position_dodge(width = 0.5), size = 2.5) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  coord_flip() +
-  labs(x = "", y = "coefficient estimate", title = "Richness Models Comparison",
-       color = "") +
-  theme_classic() +
-  theme(legend.position = "bottom")
-```
-
-
 #### Shannon diversity model
 
 ```{r message=FALSE, warning=FALSE}
-#species diversity as outcome variable - by CT location
+#global model
 shannon_model <- glm(shannon_ct ~ 
                          mean.tree.h.sc +
                          sd.r.sc +
@@ -963,13 +884,10 @@ shannon_model <- glm(shannon_ct ~
                         offset = log.act.days,
                         data = stand_mets)
 #dredge
-shan_models <- dredge(shannon_model, m.max = 2, extra = "deviance",
+shan_models <- dredge(shannon_model, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
-
-#deviance
-shan_models
 ```
 
 averaged model output - averaging all models
@@ -983,34 +901,10 @@ plot(shan_models_avg, full = FALSE, intercept = FALSE, main = "Terrestrial Mamma
 ```
 
 
-```{r}
-#plot comparing full model to model averaged outputs
-bind_rows(broom::tidy(shannon_model) %>%
-            filter(!term %in% c("(Intercept)", "eigenvectors.sc")) %>%
-            mutate(model = "full model"),
-          summary(shan_models_avg)$coefmat.subset %>%
-            as.data.frame() %>%
-            rownames_to_column("term") %>%
-            filter(!term %in% c("(Intercept)", "eigenvectors.sc")) %>%
-            rename(estimate = Estimate, std.error = `Std. Error`) %>%
-            mutate(model = "averaged model")) %>%
-  ggplot(aes(x = reorder(term, -estimate), y = estimate, color = model)) +
-  geom_errorbar(aes(ymin = estimate - std.error,
-                    ymax = estimate + std.error),
-                width = 0, position = position_dodge(width = 0.5)) +
-  geom_point(position = position_dodge(width = 0.5), size = 2.5) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  coord_flip() +
-  labs(x = "", y = "coefficient estimate", title = "Shannon Models Comparison",
-       color = "") +
-  theme_classic() +
-  theme(legend.position = "bottom")
-```
-
-
 #### Species evenness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
 even_model <- glm(div_even ~ 
                 mean.tree.h.sc +
                 sd.r.sc +
@@ -1030,13 +924,10 @@ even_model <- glm(div_even ~
               offset = log.act.days,
               data = stand_mets)
 #dredge
-even_models <- dredge(even_model, m.max = 2, extra = "deviance",
+even_models <- dredge(even_model, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
-
-#deviance
-even_models
 ```
 
 averaged model output - averaging all models
@@ -1060,7 +951,7 @@ stand_mets_FD$stand.dens.sc <- as.numeric(stand_mets_FD$stand.dens.sc)
 stand_mets_FD$basal.area.sc <- as.numeric(stand_mets_FD$basal.area.sc)
 stand_mets_FD$mean.dbh.sc <- as.numeric(stand_mets_FD$mean.dbh.sc)
 
-
+#global model
 frich_model <- glm(FRich ~ 
                 mean.tree.h.sc +
                 sd.r.sc +
@@ -1080,12 +971,9 @@ frich_model <- glm(FRich ~
               offset = log.act.days,      
               data = stand_mets_FD)
 #dredge
-frich_models <- dredge(frich_model, m.max = 2, extra = "deviance",
+frich_models <- dredge(frich_model, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
-
-#deviance
-frich_models
 ```
 
 averaged model output - averaging all models
@@ -1102,6 +990,7 @@ plot(frich_models_avg, full = FALSE, intercept = FALSE, main = "Functional Richn
 Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
 feven_model <- glm(FEven ~ 
                 mean.tree.h.sc +
                 sd.r.sc +
@@ -1120,12 +1009,9 @@ feven_model <- glm(FEven ~
               offset = log.act.days,
               data = stand_mets_FD)
 #dredge
-feven_models <- dredge(feven_model, m.max = 2, extra = "deviance",
+feven_models <- dredge(feven_model, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc))
-
-#deviance
-feven_models
 ```
 
 averaged model output - averaging all models
@@ -1145,6 +1031,7 @@ plot(feven_models_avg, full = FALSE, intercept = FALSE, main = "Functional Evenn
 Top model summary output
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+#global model
 fdiver_model <- glm(FDiver ~ 
                 mean.tree.h.sc +
                 sd.r.sc +
@@ -1164,13 +1051,10 @@ fdiver_model <- glm(FDiver ~
               offset = log.act.days,
               data = stand_mets_FD)
 #dredge
-fdiver_models <- dredge(fdiver_model, m.max = 2, extra = "deviance",
+fdiver_models <- dredge(fdiver_model, m.max = 3,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(basal.area.sc && stem.vol.sc),
                       fixed = "eigenvectors.sc")
-
-#deviance
-fdiver_models
 ```
 
 averaged model output - averaging all models
@@ -1219,7 +1103,7 @@ coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric
 coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting
+#plot
 coef_df_filter %>%
   filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
@@ -1280,9 +1164,6 @@ obs_table_75 <- ct_active_days %>%
   left_join(obs_table_75, ., by = "grid.75")
 
 grid75_mets <- left_join(grid75_mets, obs_table_75[,c("grid.75", "act.days")])
-
-#standardizing by survey effort and assigning partition to row names
-#obs_table_75 <- obs_table_75 %>% mutate(across(-0, ~ . / act.days))
 
 obs_table_75 <- as.data.frame(obs_table_75)
 obs_table_75 <- obs_table_75[-22,]
@@ -1365,7 +1246,7 @@ grid75_mets$log.act.days <- log(grid75_mets$act.days)
 #removing cells without structure metrics
 grid75_mets <- grid75_mets[complete.cases(grid75_mets),]
 
-#fitting global model for use in dredge
+#global model
 rm_75 <- glm(n.all ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1386,11 +1267,9 @@ rm_75 <- glm(n.all ~
            data = grid75_mets)
 
 #dredge
-rich_75_models <- dredge(rm_75, m.max = 2, extra = "deviance",
+rich_75_models <- dredge(rm_75, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
-#deviance
-rich_75_models
 ```
 
 averaged model output - averaging all models
@@ -1407,7 +1286,7 @@ plot(rich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Richnes
 #### Species diversity model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 sm_75 <- glm(shannon_75 ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1428,12 +1307,9 @@ sm_75 <- glm(shannon_75 ~
            data = grid75_mets)
 
 #dredge
-shan_75_models <- dredge(sm_75, m.max = 2, extra = "deviance",
+shan_75_models <- dredge(sm_75, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
-
-#deviance
-shan_75_models
 ```
 
 averaged model output - averaging all models
@@ -1450,7 +1326,7 @@ plot(shan_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Diversi
 #### Species eveness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 em_75 <- glm(even.75 ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1471,11 +1347,9 @@ em_75 <- glm(even.75 ~
            data = grid75_mets)
 
 #dredge
-even_75_models <- dredge(em_75, m.max = 2, extra = "deviance",
+even_75_models <- dredge(em_75, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
-#deviance
-even_75_models
 ```
 
 averaged model output - averaging all models
@@ -1492,7 +1366,7 @@ plot(even_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal Evennes
 #### Functional richness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fr_75 <- glm(FRich ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1532,7 +1406,7 @@ plot(frich_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich 
 #### Functional evenness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fe_75 <- glm(FEven ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1553,11 +1427,9 @@ fe_75 <- glm(FEven ~
            data = grid75_mets)
 
 #dredge
-feven_75_models <- dredge(fe_75, m.max = 2, extra = "deviance",
+feven_75_models <- dredge(fe_75, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
-#deviance
-feven_75_models
 ```
 
 averaged model output - averaging all models
@@ -1574,7 +1446,7 @@ plot(feven_models_75_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven 
 #### Functional divergence model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fd_75 <- glm(FDiver ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1595,11 +1467,9 @@ fd_75 <- glm(FDiver ~
            data = grid75_mets)
 
 #dredge
-fdiver_75_models <- dredge(fd_75, m.max = 2, extra = "deviance",
+fdiver_75_models <- dredge(fd_75, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc) && 
                                !(mean.tree.h.sc && vzrumple.sc))
-#deviance
-fdiver_75_models
 ```
 
 averaged model output - averaging all models
@@ -1698,9 +1568,6 @@ obs_table_170 <- ct_active_days %>%
 
 grid170_mets <- left_join(grid170_mets, obs_table_170[,c("grid.170", "act.days")])
 
-#standardizing by survey effort and assigning partition to row names
-#obs_table_170 <- obs_table_170 %>% mutate(across(-0, ~ . / act.days))
-
 obs_table_170 <- as.data.frame(obs_table_170)
 obs_table_170 <- obs_table_170[-13,] #drop NA row
 rownames(obs_table_170) <- obs_table_170$grid.170
@@ -1782,7 +1649,7 @@ grid170_mets$log.act.days <- log(grid170_mets$act.days)
 #removing MO1 partition since no structure mets are from this pt
 grid170_mets <- grid170_mets[complete.cases(grid170_mets),]
 
-#fitting global model for use in dredge
+#global model
 rm_170 <- glm(n.all ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1803,11 +1670,8 @@ rm_170 <- glm(n.all ~
            data = grid170_mets)
 
 #dredge
-rich_170_models <- dredge(rm_170, m.max = 2, extra = "deviance",
-                      subset = !(basal.area.sc && stand.dens.sc)) 
-
-#deviance information
-rich_170_models
+rich_170_models <- dredge(rm_170, m.max = 2,
+                      subset = !(basal.area.sc && stand.dens.sc))
 ```
 
 averaged model output - averaging all models
@@ -1824,7 +1688,7 @@ plot(rich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Richne
 #### Species diversity model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 sm_170 <- glm(shannon_170 ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1844,13 +1708,9 @@ sm_170 <- glm(shannon_170 ~
            weights = n.scanned,
            data = grid170_mets)
 
-summary(sm_170)
-
 #dredge
-shan_170_models <- dredge(sm_170, m.max = 2, extra = "deviance",
+shan_170_models <- dredge(sm_170, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc))
-#deviance
-shan_170_models
 ```
 
 averaged model output - averaging all models
@@ -1885,7 +1745,7 @@ summary(shan_models_170_avg)$coefmat.subset %>%
 #### Species eveness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 em_170 <- glm(even.170 ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1906,11 +1766,8 @@ em_170 <- glm(even.170 ~
            data = grid170_mets)
 
 #dredge
-even_170_models <- dredge(em_170, m.max = 2, extra = "deviance",
+even_170_models <- dredge(em_170, m.max = 2, 
                       subset = !(basal.area.sc && stand.dens.sc))
-
-#deviance
-even_170_models
 ```
 
 averaged model output - averaging all models
@@ -1927,7 +1784,7 @@ plot(even_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal Evenne
 #### Functional richness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fr_170 <- glm(FRich ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1948,10 +1805,8 @@ fr_170 <- glm(FRich ~
            data = grid170_mets)
 
 #dredge
-frich_170_models <- dredge(fr_170, m.max = 2, extra = "adjR^2",
+frich_170_models <- dredge(fr_170, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc))
-#R-squared information
-summary(frich_170_models$`adjR^2`)
 ```
 
 averaged model output - averaging all models
@@ -1968,7 +1823,7 @@ plot(frich_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FRich
 #### Functional evenness model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fe_170 <- glm(FEven ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -1989,11 +1844,8 @@ fe_170 <- glm(FEven ~
            data = grid170_mets)
 
 #dredge
-feven_170_models <- dredge(fe_170, m.max = 2, extra = "deviance",
+feven_170_models <- dredge(fe_170, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc)) 
-
-#deviance
-feven_170_models
 ```
 
 averaged model output - averaging all models
@@ -2010,7 +1862,7 @@ plot(feven_models_170_avg, full = FALSE, intercept = FALSE, main = "Mammal FEven
 #### Functional divergence model
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-#fitting global model for use in dredge
+#global model
 fd_170 <- glm(FDiver ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -2031,10 +1883,8 @@ fd_170 <- glm(FDiver ~
            data = grid170_mets)
 
 #dredge
-fdiver_170_models <- dredge(fd_170, m.max = 2, extra = "deviance",
+fdiver_170_models <- dredge(fd_170, m.max = 2,
                       subset = !(basal.area.sc && stand.dens.sc)) 
-#deviance
-fdiver_170_models
 ```
 
 averaged model output - averaging all models
@@ -2068,11 +1918,11 @@ rm(coef_rich, coef_shan, coef_even, coef_fric, coef_feve, coef_fdiv)
 #specifying order to plot models
 coef_df$model <- factor(coef_df$model, levels = rev(c("rich","shan","even","fric","feve","fdiv")))
 
-#select only predictors with 50% CI's that don't overlap zero
+#select only predictors with 95% CI's that don't overlap zero
 coef_df_filter <- coef_df[!(coef_df$`2.5 %` <= 0 & coef_df$`97.5 %` >= 0),]
 coef_df_filter <- coef_df_filter[!coef_df_filter$predictor %in% c("(Intercept)", "eigenvectors.sc"),]
 
-#plotting - only the functional models for now
+#plot
 coef_df_filter %>%
   filter(!model %in% c("fric")) %>%
 ggplot(aes(x = estimate, y = predictor, color = model)) +
@@ -2160,7 +2010,7 @@ ct_div_mets_terr <- ct_div_mets_terr[!ct_div_mets_terr$partition == "MO1",]
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 ct_div_mets_terr$log.act.days <- log(ct_div_mets_terr$effort)
 
-#fitting global model for use in dredge
+#global model
 rm_pt1 <- glm(n.terr ~ 
              mean.tree.h.sc +
              sd.r.sc +
@@ -2181,11 +2031,8 @@ rm_pt1 <- glm(n.terr ~
            data = ct_div_mets_terr)
 
 #dredge
-rich_pt_models <- dredge(rm_pt1, m.max = 2, extra = "deviance",
+rich_pt_models <- dredge(rm_pt1, m.max = 2,
                       subset = !(mean.tree.h.sc && vzrumple.sc)) 
-
-#deviance
-rich_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2225,10 +2072,8 @@ sm_pt1 <- glm(Shannon ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-shan_pt_models <- dredge(sm_pt1, m.max = 2, subset = !(mean.tree.h.sc && vzrumple.sc))
-                              
-#summary
-shan_pt_models
+shan_pt_models <- dredge(sm_pt1, m.max = 2, 
+                         subset = !(mean.tree.h.sc && vzrumple.sc))
 ```
 
 averaged model output - averaging all models
@@ -2285,11 +2130,8 @@ em_pt1 <- glm(evenness ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-even_pt_models <- dredge(em_pt1, m.max = 2, extra = "deviance",
+even_pt_models <- dredge(em_pt1, m.max = 2,
                       subset = !(mean.tree.h.sc && vzrumple.sc)) 
-
-#deviance
-even_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2329,11 +2171,8 @@ frich_pt <- glm(FRich ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-frich_pt_models <- dredge(frich_pt, m.max = 2, extra = "adjR^2",
+frich_pt_models <- dredge(frich_pt, m.max = 2,
                       subset = !(mean.tree.h.sc && vzrumple.sc)) 
-
-#R-squared information
-summary(frich_pt_models)
 ```
 
 averaged model output - averaging all models
@@ -2374,11 +2213,8 @@ feven_pt <- glm(FEven ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-feven_pt_models <- dredge(feven_pt, m.max = 2, extra = "deviance",
+feven_pt_models <- dredge(feven_pt, m.max = 2,
                       subset = !(mean.tree.h.sc && vzrumple.sc))
-
-#deviance
-feven_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2419,11 +2255,8 @@ fdiver_pt <- glm(FDiver ~
            weights = n.scanned,
            data = ct_div_mets_terr)
 #dredge
-fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,  extra = "deviance",
+fdiver_pt_models <- dredge(fdiver_pt, m.max = 2,
                       subset = !(mean.tree.h.sc && vzrumple.sc))
-
-#deviance
-fdiver_pt_models
 ```
 
 averaged model output - averaging all models
@@ -2486,16 +2319,13 @@ ggplot(aes(x = estimate, y = predictor, color = model)) +
 ```{r}
 #setting global label mapping for forest structure metrics
 label_mappings <- c("mean.tree.h.sc" = "tree h mean",
-                    #"rumple.sc" = "rumple index",
                     "zentropy.sc" = "vertical\ndistribution",
                     "lad.max.sc" = "leaf area\ndensity",
-                    #"CRR.rho.sc" = "canopy\nrelief ratio",
                     "ClosedGapSpace.sc" = "gap volume",
                     "vFRcanopy.sc" = "vegetation\ndensity",
                     "sd.r.sc" = "tree h sd",
-                    #"max.height.sc" = "tree h max.",
                     "stem.vol.sc" = "tree volume",
-                    "mean.dbh.sc" = "tree dbh",
+                    "mean.dbh.sc" = "tree dbh mean",
                     "vzrumple.sc" = "vertical\ncomplexity",
                     "stand.dens.sc" = "tree density",
                     "basal.area.sc" = "basal area",
@@ -2751,45 +2581,27 @@ ggplot(coef_df, aes(x = estimate, y = factor(predictor, levels = rev(metrics_ord
 
 ## Model comparison
 
-Cross-validation
-Uses mean square error (MSE) to compare predictive performance (i.e., fits the data more robustly and generalizes better to new samples)
+Cross-validation - iterating across all candidate models and averaging by outcome variable, weighted based on overall model weight
 ```{r}
 library(boot)
 
-#partition models
-cv.glm(data = ct_div_mets_terr, glmfit = get.models(rich_pt_models, 1)[[1]], K = 11)$delta[[2]]   #60.8
-cv.glm(data = ct_div_mets_terr, glmfit = get.models(shan_pt_models, 1)[[1]], K = 11)$delta[[2]]   #1.10
-cv.glm(data = ct_div_mets_terr, glmfit = get.models(even_pt_models, 1)[[1]], K = 11)$delta[[2]]   #0.086
-cv.glm(data = ct_div_mets_terr, glmfit = get.models(fdiver_pt_models, 1)[[1]], K = 11)$delta[[2]] #0.176
-cv.glm(data = ct_div_mets_terr, glmfit = get.models(feven_pt_models, 1)[[1]], K = 11)$delta[[2]]  #0.038
-
-#grid models
-cv.glm(data = grid170_mets, glmfit = get.models(rich_170_models, 1)[[1]], K = 10)$delta[[2]]   #247.6
-cv.glm(data = grid170_mets, glmfit = get.models(shan_170_models, 1)[[1]], K = 10)$delta[[2]]   #1.89
-cv.glm(data = grid170_mets, glmfit = get.models(even_170_models, 1)[[1]], K = 10)$delta[[2]]   #0.198
-cv.glm(data = grid170_mets, glmfit = get.models(fdiver_170_models, 1)[[1]], K = 10)$delta[[2]] #0.420
-cv.glm(data = grid170_mets, glmfit = get.models(feven_170_models, 1)[[1]], K = 10)$delta[[2]]  #0.132
-```
-
-CV iterating across all candidate models and averaging by outcome variable, weighted based on overall model weight
-```{r}
 get_weighted_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
   models  <- get.models(dredge_obj, subset = TRUE)
   weights <- dredge_obj$weight
   safe_cv <- safely(function(mod) cv.glm(data = data, glmfit = mod, K = K)$delta[2])
   
-  # containers
+  #containers
   delta_vals <- numeric(length(models))
   mae_vals <- rmse_vals <- rep(NA, length(models))
   
   for (i in seq_along(models)) {
     mod <- models[[i]]
     
-    # CV delta
+    #CV delta
     cv_res <- safe_cv(mod)
     delta_vals[i] <- ifelse(is.null(cv_res$result), NA, cv_res$result)
     
-    # Prediction metrics
+    #prediction metrics
     pred <- tryCatch(predict(mod, newdata = data, type = "response"), error = function(e) NA)
     obs  <- mod$y
     if (all(!is.na(pred))) {
@@ -2801,13 +2613,25 @@ get_weighted_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
   ok <- !is.na(delta_vals)
   if (verbose) message(sum(!ok), " models failed (", sum(ok), " succeeded)")
   
-  # Weighted means
+  #weighted means
   weighted <- function(x) weighted.mean(x[ok], weights[ok], na.rm = TRUE)
   
-  return(tibble(
+  #metrics for all candidate models
+  model_perf_table <- tibble(
+    model_id = seq_along(models),
+    AICc = dredge_obj$AICc[seq_along(models)],
+    weight = weights,
+    cv_delta = delta_vals,
+    MAE = mae_vals,
+    RMSE = rmse_vals)
+  
+  return(list(
+    summary = tibble(
     mean_cv_delta = weighted(delta_vals),
     mean_MAE      = weighted(mae_vals),
     mean_RMSE     = weighted(rmse_vals)
+  ),
+  all_models = model_perf_table
   ))
 }
 
@@ -2834,10 +2658,11 @@ grid_metrics   <- map(grid_models,   ~ get_weighted_metrics(grid170_mets,   .x, 
 names(forest_metrics) <- c("rich", "shan", "even", "fdiver", "feven")
 names(grid_metrics)   <- c("rich", "shan", "even", "fdiver", "feven")
 
-forest_summary <- map_dfr(forest_metrics, bind_rows, .id = "metric") %>%
+#extract summaries
+forest_summary <- map_dfr(forest_metrics, "summary", .id = "metric") %>%
   mutate(model_type = "forest")
 
-grid_summary <- map_dfr(grid_metrics, bind_rows, .id = "metric") %>%
+grid_summary <- map_dfr(grid_metrics, "summary", .id = "metric") %>%
   mutate(model_type = "grid")
 
 combined_summary <- left_join(
@@ -2850,27 +2675,483 @@ combined_summary <- left_join(
          starts_with("mean_RMSE"))
 
 #write.csv(combined_summary, file = "CVmodelcompare_weighted.csv", row.names = FALSE)
+
+#all candidate model results
+forest_all <- map_dfr(forest_metrics, "all_models", .id = "metric") %>%
+  mutate(model_type = "forest")
+
+grid_all <- map_dfr(grid_metrics, "all_models", .id = "metric") %>%
+  mutate(model_type = "grid")
+
+all_models_combined <- bind_rows(forest_all, grid_all)
+```
+
+plotting
+```{r}
+model_colors <- c("forest" = "darkgreen", "grid" = "steelblue")
+
+### ROW 1
+#richness X MSE
+p1 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "rich" & performance_metric == "cv_delta") %>%
+  left_join(combined_summary %>%
+      filter(metric == "rich") %>%
+      dplyr::select(metric, mean_cv_delta_forest, mean_cv_delta_grid) %>%
+      pivot_longer(cols = c(mean_cv_delta_forest, mean_cv_delta_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_cv_delta_forest = "forest",
+                                 mean_cv_delta_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(title = "Mean\nSquared Error", y = "Species Richness\n \nMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#richness X MAE
+p2 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "rich" & performance_metric == "MAE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "rich") %>%
+      dplyr::select(metric, mean_MAE_forest, mean_MAE_grid) %>%
+      pivot_longer(cols = c(mean_MAE_forest, mean_MAE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_MAE_forest = "forest",
+                                 mean_MAE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(title = "Mean\nAbsolute Error", y = "MAE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#richness X RMSE
+p3 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "rich" & performance_metric == "RMSE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "rich") %>%
+      dplyr::select(metric, mean_RMSE_forest, mean_RMSE_grid) %>%
+      pivot_longer(cols = c(mean_RMSE_forest, mean_RMSE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_RMSE_forest = "forest",
+                                 mean_RMSE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(title = "Root Mean\nSquared Error", y = "RMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+### ROW 2
+#shannon X MSE
+p4 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "shan" & performance_metric == "cv_delta") %>%
+  left_join(combined_summary %>%
+      filter(metric == "shan") %>%
+      dplyr::select(metric, mean_cv_delta_forest, mean_cv_delta_grid) %>%
+      pivot_longer(cols = c(mean_cv_delta_forest, mean_cv_delta_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_cv_delta_forest = "forest",
+                                 mean_cv_delta_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "Shannon Diversity\n \nMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#shannon X MAE
+p5 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "shan" & performance_metric == "MAE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "shan") %>%
+      dplyr::select(metric, mean_MAE_forest, mean_MAE_grid) %>%
+      pivot_longer(cols = c(mean_MAE_forest, mean_MAE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_MAE_forest = "forest",
+                                 mean_MAE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "MAE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#shannon X RMSE
+p6 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "shan" & performance_metric == "RMSE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "shan") %>%
+      dplyr::select(metric, mean_RMSE_forest, mean_RMSE_grid) %>%
+      pivot_longer(cols = c(mean_RMSE_forest, mean_RMSE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_RMSE_forest = "forest",
+                                 mean_RMSE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "RMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+### ROW 3
+#even X MSE
+p7 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "even" & performance_metric == "cv_delta") %>%
+  left_join(combined_summary %>%
+      filter(metric == "even") %>%
+      dplyr::select(metric, mean_cv_delta_forest, mean_cv_delta_grid) %>%
+      pivot_longer(cols = c(mean_cv_delta_forest, mean_cv_delta_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_cv_delta_forest = "forest",
+                                 mean_cv_delta_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "Species Evenness\n \nMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#even X MAE
+p8 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "even" & performance_metric == "MAE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "even") %>%
+      dplyr::select(metric, mean_MAE_forest, mean_MAE_grid) %>%
+      pivot_longer(cols = c(mean_MAE_forest, mean_MAE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_MAE_forest = "forest",
+                                 mean_MAE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "MAE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#even X RMSE
+p9 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "even" & performance_metric == "RMSE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "even") %>%
+      dplyr::select(metric, mean_RMSE_forest, mean_RMSE_grid) %>%
+      pivot_longer(cols = c(mean_RMSE_forest, mean_RMSE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_RMSE_forest = "forest",
+                                 mean_RMSE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "RMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+### ROW 4
+#fdiver X MSE
+p10 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "fdiver" & performance_metric == "cv_delta") %>%
+  left_join(combined_summary %>%
+      filter(metric == "fdiver") %>%
+      dplyr::select(metric, mean_cv_delta_forest, mean_cv_delta_grid) %>%
+      pivot_longer(cols = c(mean_cv_delta_forest, mean_cv_delta_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_cv_delta_forest = "forest",
+                                 mean_cv_delta_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "Funct. Divergence\n \nMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#fdiver X MAE
+p11 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "fdiver" & performance_metric == "MAE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "fdiver") %>%
+      dplyr::select(metric, mean_MAE_forest, mean_MAE_grid) %>%
+      pivot_longer(cols = c(mean_MAE_forest, mean_MAE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_MAE_forest = "forest",
+                                 mean_MAE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "MAE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+#fdiver X RMSE
+p12 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "fdiver" & performance_metric == "RMSE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "fdiver") %>%
+      dplyr::select(metric, mean_RMSE_forest, mean_RMSE_grid) %>%
+      pivot_longer(cols = c(mean_RMSE_forest, mean_RMSE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_RMSE_forest = "forest",
+                                 mean_RMSE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "RMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+### ROW 5
+#feven X MSE
+p13 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "feven" & performance_metric == "cv_delta") %>%
+  left_join(combined_summary %>%
+      filter(metric == "feven") %>%
+      dplyr::select(metric, mean_cv_delta_forest, mean_cv_delta_grid) %>%
+      pivot_longer(cols = c(mean_cv_delta_forest, mean_cv_delta_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_cv_delta_forest = "forest",
+                                 mean_cv_delta_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "Funct. Evenness\n \nMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = "transparent"), 
+        legend.position = "none")
+
+#feven X MAE
+p14 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "feven" & performance_metric == "MAE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "feven") %>%
+      dplyr::select(metric, mean_MAE_forest, mean_MAE_grid) %>%
+      pivot_longer(cols = c(mean_MAE_forest, mean_MAE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_MAE_forest = "forest",
+                                 mean_MAE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "MAE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  scale_x_discrete(labels = c("forest" = "partition", "grid" = "1.7 km² grid")) +
+  theme(legend.position = "none")
+
+#feven X RMSE
+p15 <- all_models_combined %>%
+  pivot_longer(cols = c(cv_delta, MAE, RMSE),
+               names_to = "performance_metric",
+               values_to = "value") %>%
+  filter(metric == "feven" & performance_metric == "RMSE") %>%
+  left_join(combined_summary %>%
+      filter(metric == "feven") %>%
+      dplyr::select(metric, mean_RMSE_forest, mean_RMSE_grid) %>%
+      pivot_longer(cols = c(mean_RMSE_forest, mean_RMSE_grid),
+                   names_to = "model_type",
+                   values_to = "weighted_mean") %>%
+      mutate(model_type = recode(model_type,
+                                 mean_RMSE_forest = "forest",
+                                 mean_RMSE_grid   = "grid")),
+    by = c("metric", "model_type")) %>%
+  ggplot(aes(x = model_type, y = value, fill = model_type)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(aes(color = model_type), width = 0.15, size = 2, alpha = 0.7) +
+  geom_point(aes(y = weighted_mean), color = "orange", shape = 18, size = 4) +
+  stat_summary(fun = mean, geom = "point", shape = 16, size = 2, color = "black") +
+  labs(y = "RMSE", x = "") +
+  scale_fill_manual(values = model_colors) +
+  scale_color_manual(values = model_colors) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = "transparent"),
+        legend.position = "none")
+
+ggarrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15,
+          ncol = 3, nrow = 5)
+
+#ggsave("PerfMetric_Multiplot.jpg", plot = last_plot(), width = 7, height = 8.5, dpi = 500, device = "jpeg")
 ```
 
 
-Again without weighting averages
+Again for arithmetic means
 ```{r}
 get_mean_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
   models  <- get.models(dredge_obj, subset = TRUE)
   safe_cv <- safely(function(mod) cv.glm(data = data, glmfit = mod, K = K)$delta[2])
   
-  # containers
+  #containers
   delta_vals <- numeric(length(models))
   mae_vals <- rmse_vals <- rep(NA, length(models))
   
   for (i in seq_along(models)) {
     mod <- models[[i]]
     
-    # CV delta
+    #CV delta
     cv_res <- safe_cv(mod)
     delta_vals[i] <- ifelse(is.null(cv_res$result), NA, cv_res$result)
     
-    # Prediction metrics
+    #prediction metrics
     pred <- tryCatch(predict(mod, newdata = data, type = "response"), error = function(e) NA)
     obs  <- mod$y
     if (all(!is.na(pred))) {
@@ -2882,35 +3163,133 @@ get_mean_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
   ok <- !is.na(delta_vals)
   if (verbose) message(sum(!ok), " models failed (", sum(ok), " succeeded)")
   
-  # Unweighted (arithmetic) means
+  #unweighted (arithmetic) means
   simple_mean <- function(x) mean(x[ok], na.rm = TRUE)
   
-  return(tibble(
-    mean_cv_delta = simple_mean(delta_vals),
-    mean_MAE      = simple_mean(mae_vals),
-    mean_RMSE     = simple_mean(rmse_vals)
+  #metrics for all candidate models
+  model_perf_table <- tibble(
+    model_id = seq_along(models),
+    AICc = dredge_obj$AICc[seq_along(models)],
+    cv_delta = delta_vals,
+    MAE = mae_vals,
+    RMSE = rmse_vals
+  )
+  
+  return(list(
+    summary = tibble(
+      mean_cv_delta = simple_mean(delta_vals),
+      mean_MAE      = simple_mean(mae_vals),
+      mean_RMSE     = simple_mean(rmse_vals)
+    ),
+    all_models = model_perf_table
   ))
 }
 
+#apply forest and grid models
 forest_metrics <- map(forest_models, ~ get_mean_metrics(ct_div_mets_terr, .x, K = 11))
 grid_metrics   <- map(grid_models,   ~ get_mean_metrics(grid170_mets,   .x, K = 10))
 
-# Convert to data frames
-forest_summary <- map_dfr(forest_metrics, bind_rows, .id = "metric") %>%
-  rename_with(~ paste0(.x, "_forest"), -metric)
+names(forest_metrics) <- c("rich", "shan", "even", "fdiver", "feven")
+names(grid_metrics)   <- c("rich", "shan", "even", "fdiver", "feven")
 
-grid_summary <- map_dfr(grid_metrics, bind_rows, .id = "metric") %>%
-  rename_with(~ paste0(.x, "_grid"), -metric)
+#extract summaries
+forest_summary <- map_dfr(forest_metrics, "summary", .id = "metric") %>%
+  mutate(model_type = "forest")
+grid_summary <- map_dfr(grid_metrics, "summary", .id = "metric") %>%
+  mutate(model_type = "grid")
 
-# Combine for side-by-side comparison
-combined_summary <- left_join(forest_summary, grid_summary, by = "metric") %>%
+combined_summary <- left_join(
+  forest_summary %>% rename_with(~ paste0(.x, "_forest"), -c(metric, model_type)),
+  grid_summary %>% rename_with(~ paste0(.x, "_grid"), -c(metric, model_type)),
+  by = "metric"
+) %>%
   dplyr::select(
     metric,
-    mean_cv_delta_forest, mean_cv_delta_grid,
-    mean_MAE_forest,      mean_MAE_grid,
-    mean_RMSE_forest,     mean_RMSE_grid)
+    starts_with("mean_cv_delta"),
+    starts_with("mean_MAE"),
+    starts_with("mean_RMSE")
+  )
 
 #write.csv(combined_summary, file = "CVmodelcompare_NotWeighted.csv", row.names = FALSE)
+```
+
+Again for median values
+```{r}
+get_median_metrics <- function(data, dredge_obj, K = 10, verbose = TRUE) {
+  models  <- get.models(dredge_obj, subset = TRUE)
+  safe_cv <- safely(function(mod) cv.glm(data = data, glmfit = mod, K = K)$delta[2])
+  
+  #containers
+  delta_vals <- numeric(length(models))
+  mae_vals <- rmse_vals <- rep(NA, length(models))
+  
+  for (i in seq_along(models)) {
+    mod <- models[[i]]
+    
+    #CV delta
+    cv_res <- safe_cv(mod)
+    delta_vals[i] <- ifelse(is.null(cv_res$result), NA, cv_res$result)
+    
+    #prediction metrics
+    pred <- tryCatch(predict(mod, newdata = data, type = "response"), error = function(e) NA)
+    obs  <- mod$y
+    if (all(!is.na(pred))) {
+      mae_vals[i]  <- mean(abs(obs - pred), na.rm = TRUE)
+      rmse_vals[i] <- sqrt(mean((obs - pred)^2, na.rm = TRUE))
+    }
+  }
+  
+  ok <- !is.na(delta_vals)
+  if (verbose) message(sum(!ok), " models failed (", sum(ok), " succeeded)")
+  
+  #unweighted medians
+  simple_median <- function(x) median(x[ok], na.rm = TRUE)
+  
+  #metrics for all candidate models
+  model_perf_table <- tibble(
+    model_id = seq_along(models),
+    AICc = dredge_obj$AICc[seq_along(models)],
+    cv_delta = delta_vals,
+    MAE = mae_vals,
+    RMSE = rmse_vals
+  )
+  
+  return(list(
+    summary = tibble(
+      median_cv_delta = simple_median(delta_vals),
+      median_MAE      = simple_median(mae_vals),
+      median_RMSE     = simple_median(rmse_vals)
+    ),
+    all_models = model_perf_table
+  ))
+}
+
+#apply to forest and grid models
+forest_metrics <- map(forest_models, ~ get_median_metrics(ct_div_mets_terr, .x, K = 11))
+grid_metrics   <- map(grid_models,   ~ get_median_metrics(grid170_mets,   .x, K = 10))
+
+names(forest_metrics) <- c("rich", "shan", "even", "fdiver", "feven")
+names(grid_metrics)   <- c("rich", "shan", "even", "fdiver", "feven")
+
+#extract summaries
+forest_summary <- map_dfr(forest_metrics, "summary", .id = "metric") %>%
+  mutate(model_type = "forest")
+grid_summary <- map_dfr(grid_metrics, "summary", .id = "metric") %>%
+  mutate(model_type = "grid")
+
+combined_summary <- left_join(
+  forest_summary %>% rename_with(~ paste0(.x, "_forest"), -c(metric, model_type)),
+  grid_summary %>% rename_with(~ paste0(.x, "_grid"), -c(metric, model_type)),
+  by = "metric"
+) %>%
+  dplyr::select(
+    metric,
+    starts_with("median_cv_delta"),
+    starts_with("median_MAE"),
+    starts_with("median_RMSE")
+  )
+
+#write.csv(combined_summary, file = "CVmodelcompare_Median.csv", row.names = FALSE)
 ```
 
 
@@ -2940,7 +3319,7 @@ cp2 <- ggpredict(get.models(feven_models, 2)[[1]], terms = "basal.area.sc") %>%
 
 ### Gap volume
 #ct scale - richness
-cp3 <- ggpredict(get.models(rich_models, 2)[[1]], terms = "ClosedGapSpace.sc") %>%
+cp3 <- ggpredict(get.models(rich_models, 1)[[1]], terms = "ClosedGapSpace.sc") %>%
   ggplot(aes(x = x, y = predicted)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "lightgreen", alpha = 0.3) +
   geom_line(color = "forestgreen", size = 1.2) +
@@ -2977,7 +3356,7 @@ cp6 <- ggpredict(get.models(rich_75_models, 1)[[1]], terms = "mean.dbh.sc") %>%
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "lightgrey", alpha = 0.3) +
   geom_line(color = "grey", size = 1.2) +
   theme_classic() +
-  labs(x = "cm (z)", y = "", title = "tree dbh\n(0.75 km² grid)") +
+  labs(x = "cm (z)", y = "", title = "tree dbh mean\n(0.75 km² grid)") +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylim(0, 68)
 
@@ -3052,7 +3431,7 @@ cowplot::plot_grid(
 #read in the forest type and partitions by grid cell data
 grid_int <- read.csv(file = "data/grids_intersect.csv", header = TRUE)
 
-#remove heath forests
+#remove heath forests (kerangas)
 grid_int <- grid_int[!grid_int$habitat == "Heath",]
 
 #number and avg. of partitions in each cell of the two grid systems
@@ -3126,7 +3505,7 @@ metric_list2 <- sub("\\.sc$", "", metrics_order)
 metric_list_FD <- c(metric_list, metric_list2, "FRich", "FEven", "FDiver")
 stand_mets$study.area <- 1
 
-#function to calculate adjusted coefficient of variation
+#function to calculate small-sample adjusted coefficient of variation
 calculate_adj_cv <- function(x) {
   N <- length(x[!is.na(x)])
   if (N > 1) {
@@ -3190,7 +3569,7 @@ adjCV_mets %>%
                               "vFRcanopy" = "veg. dens.",
                               "sd.r" = "tree h sd",
                               "stem.vol" = "tree vol.",
-                              "mean.dbh" = "tree dbh",
+                              "mean.dbh" = "tree dbh mean",
                               "vzrumple" = "vert. complex.",
                               "stand.dens" = "tree dens.",
                               "basal.area" = "basal area",
@@ -3254,7 +3633,7 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
                                "vFRcanopy" = "vegetation density",
                                "sd.r" = "tree h sd",
                                "stem.vol" = "tree volume",
-                               "mean.dbh" = "tree dbh",
+                               "mean.dbh" = "tree dbh mean",
                                "vzrumple" = "vertical complexity",
                                "stand.dens" = "tree density",
                                "basal.area" = "basal area",
@@ -3264,7 +3643,7 @@ adjCV_mets_long2 <- adjCV_mets2 %>%
 plot
 ```{r}
 #set order
-metrics_order2 <- c("tree h mean", "tree h sd", "tree dbh", "basal area", "tree density", 
+metrics_order2 <- c("tree h mean", "tree h sd", "tree dbh mean", "basal area", "tree density", 
                     "tree volume", "near ground vegetation", "leaf area density", "gap volume",  
                     "vegetation density", "vertical distribution", "vertical complexity")
 
@@ -3273,9 +3652,16 @@ adjCV_mets_long2 <- adjCV_mets_long2 %>%
   filter(!metric %in% c("n.all", "shannon_ct", "div_even", "FRich", "FEven", "FDiver")) %>%
   mutate(metric_label = factor(metric_label, levels = metrics_order2))
 
-#plot using log scale x axis
+#plot 
+partition_means <- adjCV_mets_long2 %>%
+  filter(scale == "partition") %>%
+  mutate(scale_numeric = 1.7) %>%
+  group_by(metric_label) %>%
+  summarise(y = mean(value),
+            x = first(scale_numeric)) 
+
 adjCV_mets_long2 %>%
-  filter(scale != "partition") %>%  # Exclude the partition scale from the main plot
+  filter(scale != "partition") %>%
   mutate(scale_numeric = case_when(
     scale == "75 ha" ~ 0.75,
     scale == "170 ha" ~ 1.7,
@@ -3284,14 +3670,13 @@ adjCV_mets_long2 %>%
   )) %>%
   ggplot(aes(x = scale_numeric, y = value, group = metric)) +
   stat_summary(fun = mean, geom = "line", aes(color = "mean trend"), size = 1) +
-  stat_summary(data = adjCV_mets_long2 %>% 
-                 filter(scale == "partition") %>%
-                 mutate(scale_numeric = 1.7), 
-               fun = mean, geom = "errorbarh", aes(xmax = 2, xmin = 1.4), 
-               color = "forestgreen", size = 1.2, height = 0) +
+  geom_errorbar(data = partition_means,
+                 aes(x = x, ymin = y, ymax = y),
+                 color = "forestgreen", size = 1.2, width = 0.2,
+                inherit.aes = FALSE) +
   facet_wrap(~ metric_label, scales = "free_y", ncol = 3) +
   labs(x = expression("spatial scale ("*km^2*")"), 
-       y = "adjusted coefficient of variation") +
+       y = "coefficient of variation") +
   theme_minimal() +
   theme(legend.position = "none") +
   scale_x_log10(breaks = c(0.75, 1.7, 6.5, 26),
@@ -3299,6 +3684,43 @@ adjCV_mets_long2 %>%
   scale_color_manual(values = c("mean trend" = "grey30"))
 
 #ggsave("FS_by_scale_line-plot.jpg", plot = last_plot(), width = 6, height = 6, dpi = 500, device = "jpeg")
+```
+
+Again, showing the full distribution of values and setting matching y-axis scales
+```{r}
+adjCV_mets_long2 %>%
+  mutate(scale_numeric = case_when(
+    scale == "75 ha" ~ 0.75,
+    scale == "170 ha" ~ 1.7,
+    scale == "650 ha" ~ 6.5,
+    scale == "study area" ~ 26,
+    scale == "partition" ~ 1.7)) %>%
+  ggplot(aes(x = scale_numeric, y = value, group = metric)) +
+  geom_jitter(aes(color = scale), width = 0.05, size = 1.5, alpha = 0.7) +
+  stat_summary(fun = mean, geom = "line", aes(color = "mean trend"), size = 1) +
+  stat_summary(fun = mean, geom = "point", aes(color = "mean trend"), size = 2) +
+  geom_errorbar(data = partition_means, 
+                aes(x = 1.7, ymin = y, ymax = y),
+                color = "forestgreen", size = 1.2, width = 0.2,
+                inherit.aes = FALSE) +
+  facet_wrap(~ metric_label, ncol = 3, scales = "fixed") +
+  labs(x = expression("spatial scale ("*km^2*")"), 
+       y = "coefficient of variation") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_x_log10(
+    breaks = c(0.75, 1.7, 6.5, 26),
+    labels = c("0.75", "1.7", "6.5", "26")
+  ) +
+  scale_color_manual(values = c(
+    "75 ha" = "grey15",
+    "170 ha" = "grey15",
+    "650 ha" = "grey15",
+    "study area" = "grey15",
+    "partition" = "green3",
+    "mean trend" = "grey15"))
+
+#ggsave("FS_by_scale_dist.jpg", plot = last_plot(), width = 6, height = 6, dpi = 500, device = "jpeg")
 ```
 
 
